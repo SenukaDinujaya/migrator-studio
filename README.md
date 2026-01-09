@@ -11,7 +11,7 @@ A configuration-driven framework for building data transformation scripts (trans
 - **Live preview**: See results after each transformation step (10 sample rows)
 - **Auto-generated code**: Config → Production-ready Python transformer
 - **Built-in patterns**: Pre-built components for 12 common transformation types
-- **Rapid iteration**: Build transformers in 20-60 minutes instead of 2-8 hours
+- **Rapid iteration**: Build transformers effiecinetly and accurately.
 
 ---
 
@@ -109,7 +109,7 @@ Interactive development mode showing sample data after each transformation step.
 
 ## Goal
 
-**Reduce transformer development time from 2-8 hours to 20-60 minutes** while maintaining code quality and flexibility.
+**Reduce transformer development time and complexity**
 
 ---
 
