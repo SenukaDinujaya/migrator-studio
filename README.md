@@ -71,9 +71,9 @@ The `archive/` directory contains historical documents:
 - [ ] Documentation + examples
 
 ### Phase 3: Validation
-- [ ] Team testing
-- [ ] Measure time savings
-- [ ] Iterate based on feedback
+- [ ] Transformer build testing
+- [ ] Live data feedback testing
+- [ ] Fix any bugs or making necessary adjustments.
 
 ---
 
