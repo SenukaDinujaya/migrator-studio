@@ -109,7 +109,7 @@ Interactive development mode showing sample data after each transformation step.
 
 ## Goal
 
-**Reduce transformer development time from 2-8 hours to 20-60 minutes** while maintaining code quality and flexibility.
+**Reduce transformer development time and complexity**
 
 ---
 
