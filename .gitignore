@@ -71,3 +71,6 @@ output/
 tmp/
 temp/
 *.tmp
+
+# Sample data (generated for development/testing)
+sample/
