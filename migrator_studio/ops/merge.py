@@ -28,7 +28,15 @@ def _prepare_right_df(
     return right[cols_to_keep]
 
 
-@tracked("merge_left")
+def _get_merge_columns(p: dict) -> list[str]:
+    """Get columns added by merge operations."""
+    select_columns = p.get("select_columns")
+    if select_columns:
+        return select_columns
+    return []
+
+
+@tracked("merge_left", affected_columns=_get_merge_columns)
 def merge_left(
     df: pd.DataFrame,
     right: pd.DataFrame,
@@ -70,7 +78,7 @@ def merge_left(
     )
 
 
-@tracked("merge_inner")
+@tracked("merge_inner", affected_columns=_get_merge_columns)
 def merge_inner(
     df: pd.DataFrame,
     right: pd.DataFrame,
@@ -98,7 +106,7 @@ def merge_inner(
     )
 
 
-@tracked("merge_outer")
+@tracked("merge_outer", affected_columns=_get_merge_columns)
 def merge_outer(
     df: pd.DataFrame,
     right: pd.DataFrame,

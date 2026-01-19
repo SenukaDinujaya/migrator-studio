@@ -14,6 +14,7 @@ __version__ = "0.1.0"
 from .config import configure, get_config
 from .session import BuildSession
 from .loader import load_source
+from .step import step
 
 # Registry functions
 from .ops._base import list_operations, get_operation
@@ -111,6 +112,7 @@ __all__ = [
     "get_config",
     "BuildSession",
     "load_source",
+    "step",
     # Registry
     "list_operations",
     "get_operation",

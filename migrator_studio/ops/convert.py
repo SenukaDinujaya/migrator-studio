@@ -8,7 +8,15 @@ from ._base import tracked
 from ._validation import validate_column_exists
 
 
-@tracked("to_numeric")
+def _get_convert_target(p: dict) -> list[str]:
+    """Get target column for convert operations."""
+    target = p.get("target")
+    if target:
+        return [target]
+    return [p.get("column", "")]
+
+
+@tracked("to_numeric", affected_columns=_get_convert_target)
 def to_numeric(
     df: pd.DataFrame,
     column: str,
@@ -36,7 +44,7 @@ def to_numeric(
     return result
 
 
-@tracked("to_int")
+@tracked("to_int", affected_columns=_get_convert_target)
 def to_int(
     df: pd.DataFrame,
     column: str,
@@ -64,7 +72,7 @@ def to_int(
     return result
 
 
-@tracked("to_string")
+@tracked("to_string", affected_columns=_get_convert_target)
 def to_string(
     df: pd.DataFrame,
     column: str,
@@ -90,7 +98,7 @@ def to_string(
     return result
 
 
-@tracked("to_bool")
+@tracked("to_bool", affected_columns=_get_convert_target)
 def to_bool(
     df: pd.DataFrame,
     column: str,

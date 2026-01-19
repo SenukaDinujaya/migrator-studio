@@ -8,7 +8,19 @@ from ._base import tracked
 from ._validation import validate_column_exists, validate_columns_exist
 
 
-@tracked("groupby_agg")
+def _get_agg_columns(p: dict) -> list[str]:
+    """Get columns created by aggregation operations."""
+    agg = p.get("agg", {})
+    cols = []
+    for col, funcs in agg.items():
+        if isinstance(funcs, list):
+            cols.extend([f"{col}_{f}" for f in funcs])
+        else:
+            cols.append(col)
+    return cols
+
+
+@tracked("groupby_agg", affected_columns=_get_agg_columns)
 def groupby_agg(
     df: pd.DataFrame,
     by: Union[str, list[str]],
@@ -55,7 +67,7 @@ def groupby_agg(
     return result.reset_index(drop=True)
 
 
-@tracked("groupby_concat")
+@tracked("groupby_concat", affected_columns=lambda p: [p.get("target", "")])
 def groupby_concat(
     df: pd.DataFrame,
     by: Union[str, list[str]],

@@ -8,7 +8,15 @@ from ._base import tracked
 from ._validation import validate_column_exists
 
 
-@tracked("parse_date")
+def _get_date_target(p: dict) -> list[str]:
+    """Get target column for date operations."""
+    target = p.get("target")
+    if target:
+        return [target]
+    return [p.get("column", "")]
+
+
+@tracked("parse_date", affected_columns=_get_date_target)
 def parse_date(
     df: pd.DataFrame,
     column: str,
@@ -41,7 +49,7 @@ def parse_date(
     return result
 
 
-@tracked("format_date")
+@tracked("format_date", affected_columns=_get_date_target)
 def format_date(
     df: pd.DataFrame,
     column: str,
@@ -73,7 +81,7 @@ def format_date(
     return result
 
 
-@tracked("extract_date_part")
+@tracked("extract_date_part", affected_columns=lambda p: [p.get("target", "")])
 def extract_date_part(
     df: pd.DataFrame,
     column: str,
@@ -118,7 +126,7 @@ def extract_date_part(
     return result
 
 
-@tracked("handle_invalid_dates")
+@tracked("handle_invalid_dates", affected_columns=lambda p: [p.get("column", "")])
 def handle_invalid_dates(
     df: pd.DataFrame,
     column: str,

@@ -49,7 +49,18 @@ def _resolve_target(
     )
 
 
-@tracked("map_dict")
+def _get_map_target(p: dict) -> list[str]:
+    """Get target column for mapping operations."""
+    target = p.get("target")
+    if target:
+        return [target]
+    column = p.get("column")
+    if isinstance(column, str):
+        return [column]
+    return []
+
+
+@tracked("map_dict", affected_columns=_get_map_target)
 def map_dict(
     df: pd.DataFrame,
     column: Union[str, list[str]],
@@ -106,7 +117,7 @@ def map_dict(
     return result
 
 
-@tracked("map_lookup")
+@tracked("map_lookup", affected_columns=_get_map_target)
 def map_lookup(
     df: pd.DataFrame,
     column: Union[str, list[str]],

@@ -8,7 +8,7 @@ from ._base import tracked
 from ._validation import validate_column_exists, validate_columns_exist
 
 
-@tracked("copy_column")
+@tracked("copy_column", affected_columns=lambda p: [p.get("target", "")])
 def copy_column(
     df: pd.DataFrame,
     source: str,
@@ -31,7 +31,7 @@ def copy_column(
     return result
 
 
-@tracked("set_value")
+@tracked("set_value", affected_columns=lambda p: [p.get("column", "")])
 def set_value(
     df: pd.DataFrame,
     column: str,
@@ -53,7 +53,7 @@ def set_value(
     return result
 
 
-@tracked("concat_columns")
+@tracked("concat_columns", affected_columns=lambda p: [p.get("target", "")])
 def concat_columns(
     df: pd.DataFrame,
     columns: list[str],
@@ -80,7 +80,7 @@ def concat_columns(
     return result
 
 
-@tracked("rename_columns")
+@tracked("rename_columns", affected_columns=lambda p: list(p.get("mapping", {}).values()))
 def rename_columns(
     df: pd.DataFrame,
     mapping: dict[str, str],
@@ -105,7 +105,7 @@ def rename_columns(
     return df.rename(columns=mapping)
 
 
-@tracked("drop_columns")
+@tracked("drop_columns", affected_columns=lambda p: p.get("columns", []))
 def drop_columns(
     df: pd.DataFrame,
     columns: list[str],
@@ -124,7 +124,7 @@ def drop_columns(
     return df.drop(columns=columns)
 
 
-@tracked("select_columns")
+@tracked("select_columns", affected_columns=lambda p: p.get("columns", []))
 def select_columns(
     df: pd.DataFrame,
     columns: list[str],

@@ -61,6 +61,8 @@ def load_source(
             rows_before=original_rows,
             rows_after=len(df),
             duration_ms=duration_ms,
+            result_df=df,
+            affected_columns=[],
         )
 
     return df

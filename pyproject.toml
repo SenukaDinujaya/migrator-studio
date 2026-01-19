@@ -13,13 +13,17 @@ dependencies = [
     "pyarrow>=12.0.0",
 ]
 
+[project.scripts]
+migrator = "migrator_studio.cli.main:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
 ]
-marimo = [
-    "marimo>=0.1.0",
+preview = [
+    "marimo>=0.8.0",
+    "rich>=13.0.0",
 ]
 
 [tool.pytest.ini_options]

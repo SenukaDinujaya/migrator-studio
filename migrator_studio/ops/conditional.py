@@ -9,7 +9,7 @@ from ._base import tracked
 from ._validation import validate_column_exists, validate_columns_exist
 
 
-@tracked("where")
+@tracked("where", affected_columns=lambda p: [p.get("column", "")])
 def where(
     df: pd.DataFrame,
     column: str,
@@ -36,7 +36,7 @@ def where(
     return result
 
 
-@tracked("case")
+@tracked("case", affected_columns=lambda p: [p.get("column", "")])
 def case(
     df: pd.DataFrame,
     column: str,
@@ -70,7 +70,15 @@ def case(
     return result
 
 
-@tracked("fill_null")
+def _get_fill_null_target(p: dict) -> list[str]:
+    """Get target column for fill_null operation."""
+    target = p.get("target")
+    if target:
+        return [target]
+    return [p.get("column", "")]
+
+
+@tracked("fill_null", affected_columns=_get_fill_null_target)
 def fill_null(
     df: pd.DataFrame,
     column: str,
@@ -98,7 +106,7 @@ def fill_null(
     return result
 
 
-@tracked("coalesce")
+@tracked("coalesce", affected_columns=lambda p: [p.get("target", "")])
 def coalesce(
     df: pd.DataFrame,
     columns: list[str],

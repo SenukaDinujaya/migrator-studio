@@ -8,7 +8,7 @@ from ._base import tracked
 from ._validation import validate_column_exists
 
 
-@tracked("apply_row")
+@tracked("apply_row", affected_columns=lambda p: [p.get("target", "")])
 def apply_row(
     df: pd.DataFrame,
     func: Callable[[pd.Series], Any],
@@ -42,7 +42,15 @@ def apply_row(
     return result
 
 
-@tracked("apply_column")
+def _get_apply_column_target(p: dict) -> list[str]:
+    """Get target column for apply_column operation."""
+    target = p.get("target")
+    if target:
+        return [target]
+    return [p.get("column", "")]
+
+
+@tracked("apply_column", affected_columns=_get_apply_column_target)
 def apply_column(
     df: pd.DataFrame,
     column: str,
@@ -73,7 +81,7 @@ def apply_column(
     return result
 
 
-@tracked("transform")
+@tracked("transform", affected_columns=lambda p: [])
 def transform(
     df: pd.DataFrame,
     func: Callable[[pd.DataFrame], pd.DataFrame],

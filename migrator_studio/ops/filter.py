@@ -15,7 +15,7 @@ from ._validation import (
 )
 
 
-@tracked("filter_isin")
+@tracked("filter_isin", affected_columns=lambda p: [])
 def filter_isin(
     df: pd.DataFrame,
     column: str,
@@ -37,7 +37,7 @@ def filter_isin(
     return df[df[column].isin(values)].reset_index(drop=True)
 
 
-@tracked("filter_not_isin")
+@tracked("filter_not_isin", affected_columns=lambda p: [])
 def filter_not_isin(
     df: pd.DataFrame,
     column: str,
@@ -59,7 +59,7 @@ def filter_not_isin(
     return df[~df[column].isin(values)].reset_index(drop=True)
 
 
-@tracked("filter_by_value")
+@tracked("filter_by_value", affected_columns=lambda p: [])
 def filter_by_value(
     df: pd.DataFrame,
     column: str,
@@ -124,7 +124,7 @@ def filter_by_value(
     return df[mask].reset_index(drop=True)
 
 
-@tracked("filter_null")
+@tracked("filter_null", affected_columns=lambda p: [])
 def filter_null(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """
     Keep only rows where column is null/NA.
@@ -140,7 +140,7 @@ def filter_null(df: pd.DataFrame, column: str) -> pd.DataFrame:
     return df[df[column].isna()].reset_index(drop=True)
 
 
-@tracked("filter_not_null")
+@tracked("filter_not_null", affected_columns=lambda p: [])
 def filter_not_null(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """
     Keep only rows where column is not null/NA.
@@ -156,7 +156,7 @@ def filter_not_null(df: pd.DataFrame, column: str) -> pd.DataFrame:
     return df[df[column].notna()].reset_index(drop=True)
 
 
-@tracked("filter_date")
+@tracked("filter_date", affected_columns=lambda p: [])
 def filter_date(
     df: pd.DataFrame,
     column: str,
@@ -222,7 +222,7 @@ def filter_date(
     return df[mask].reset_index(drop=True)
 
 
-@tracked("sanitize_data")
+@tracked("sanitize_data", affected_columns=lambda p: [])
 def sanitize_data(
     df: pd.DataFrame,
     *,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import time
 from functools import wraps
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import pandas as pd
 
@@ -15,14 +15,32 @@ F = TypeVar("F", bound=Callable[..., pd.DataFrame])
 _OPERATIONS: dict[str, Callable] = {}
 
 
-def tracked(operation_name: str) -> Callable[[F], F]:
-    """Decorator that tracks operation in build mode. No-op in production."""
+def tracked(
+    operation_name: str,
+    affected_columns: Optional[Callable[[dict], list[str]]] = None,
+) -> Callable[[F], F]:
+    """Decorator that tracks operation in build mode. No-op in production.
+
+    Args:
+        operation_name: Name of the operation for display/logging.
+        affected_columns: Optional callable that takes the operation parameters
+            (as a dict) and returns a list of affected column names. Used for
+            preview display to highlight which columns were modified.
+
+    Example:
+        @tracked("set_value", affected_columns=lambda p: [p.get("column", "")])
+        def set_value(df, column, value):
+            ...
+    """
     def decorator(func: F) -> F:
         # Register the operation
         _OPERATIONS[operation_name] = func
 
         @wraps(func)
         def wrapper(df: pd.DataFrame, *args: Any, **kwargs: Any) -> pd.DataFrame:
+            # Check for _display kwarg to suppress display
+            suppress_display = kwargs.pop("_display", True) is False
+
             session = get_active_session()
 
             if session is None:
@@ -37,12 +55,23 @@ def tracked(operation_name: str) -> Callable[[F], F]:
             rows_after = len(result)
             params = _extract_params(func, args, kwargs)
 
+            # Compute affected columns
+            cols: list[str] = []
+            if affected_columns is not None:
+                try:
+                    cols = affected_columns(params)
+                except Exception:
+                    cols = []
+
             session.record(
                 operation=operation_name,
                 params=params,
                 rows_before=rows_before,
                 rows_after=rows_after,
                 duration_ms=duration_ms,
+                result_df=result,
+                affected_columns=cols,
+                suppress_display=suppress_display,
             )
 
             return result
