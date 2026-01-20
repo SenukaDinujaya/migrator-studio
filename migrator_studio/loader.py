@@ -7,7 +7,7 @@ from typing import Optional
 import pandas as pd
 
 from .config import get_config
-from .ops._tracking import get_active_session, get_sample_size
+from .operations._tracking import get_active_session, get_sample_size
 
 
 def load_source(

@@ -15,7 +15,7 @@ from migrator_studio import (
     filter_date,
     sanitize_data,
 )
-from migrator_studio.ops._validation import FilterTypeError, FilterValueWarning
+from migrator_studio.operations._validation import FilterTypeError, FilterValueWarning
 
 
 class TestFilterIsin:

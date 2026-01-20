@@ -1,5 +1,5 @@
 """Backward compatibility - tracking now lives in ops._tracking"""
-from .ops._tracking import (
+from .operations._tracking import (
     OperationRecord,
     SessionTracker,
     get_active_session,

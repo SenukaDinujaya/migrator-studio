@@ -4,7 +4,7 @@ from typing import Optional
 
 import pandas as pd
 
-from .ops._tracking import (
+from .operations._tracking import (
     OperationRecord,
     SessionTracker,
     set_active_session,

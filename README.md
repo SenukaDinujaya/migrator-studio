@@ -20,7 +20,7 @@ pip install -e .
 
 ```python
 from migrator_studio import BuildSession, load_source
-from migrator_studio.ops import filter_isin, map_dict, set_value
+from migrator_studio.operations import filter_isin, map_dict, set_value
 
 # Development mode with live preview
 with BuildSession(sample=10) as session:
@@ -44,7 +44,7 @@ with BuildSession(sample=10) as session:
 - **Configuration-driven transformations** - Pre-built operations for common data transformation patterns
 - **Live preview mode** - Step-by-step execution with sample data during development
 - **Operation tracking** - Automatic tracking of row counts, timing, and affected columns
-- **Standalone ops module** - Use operations independently with `from migrator_studio.ops import ...`
+- **Standalone operations module** - Use operations independently with `from migrator_studio.operations import ...`
 
 ## Supported Operations
 

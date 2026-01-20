@@ -17,10 +17,10 @@ from .loader import load_source
 from .step import step
 
 # Registry functions
-from .ops._base import list_operations, get_operation
+from .operations._base import list_operations, get_operation
 
 # Filter (Pattern 1)
-from .ops.filter import (
+from .operations.filter import (
     filter_isin,
     filter_not_isin,
     filter_by_value,
@@ -31,20 +31,20 @@ from .ops.filter import (
 )
 
 # Merge (Pattern 2)
-from .ops.merge import (
+from .operations.merge import (
     merge_left,
     merge_inner,
     merge_outer,
 )
 
 # Mapping (Pattern 3)
-from .ops.mapping import (
+from .operations.mapping import (
     map_dict,
     map_lookup,
 )
 
 # Field (Pattern 4)
-from .ops.field import (
+from .operations.field import (
     copy_column,
     set_value,
     concat_columns,
@@ -54,7 +54,7 @@ from .ops.field import (
 )
 
 # Date (Pattern 5)
-from .ops.date import (
+from .operations.date import (
     parse_date,
     format_date,
     extract_date_part,
@@ -62,13 +62,13 @@ from .ops.date import (
 )
 
 # Aggregate (Pattern 6)
-from .ops.aggregate import (
+from .operations.aggregate import (
     groupby_agg,
     groupby_concat,
 )
 
 # Convert (Pattern 7)
-from .ops.convert import (
+from .operations.convert import (
     to_numeric,
     to_int,
     to_string,
@@ -76,7 +76,7 @@ from .ops.convert import (
 )
 
 # Conditional (Pattern 8)
-from .ops.conditional import (
+from .operations.conditional import (
     where,
     case,
     fill_null,
@@ -84,7 +84,7 @@ from .ops.conditional import (
 )
 
 # String (Pattern 9)
-from .ops.string import (
+from .operations.string import (
     str_upper,
     str_lower,
     str_strip,
@@ -93,14 +93,14 @@ from .ops.string import (
 )
 
 # Dedup (Pattern 11)
-from .ops.dedup import (
+from .operations.dedup import (
     drop_duplicates,
     keep_max,
     keep_min,
 )
 
 # Apply (Pattern 12)
-from .ops.apply import (
+from .operations.apply import (
     apply_row,
     apply_column,
     transform,

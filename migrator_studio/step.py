@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Optional
-from .ops._tracking import get_active_session
+from .operations._tracking import get_active_session
 
 
 def step(name: str, description: Optional[str] = None) -> None:
