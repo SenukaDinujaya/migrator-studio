@@ -6,25 +6,31 @@ build-backend = "hatchling.build"
 name = "migrator_studio"
 version = "0.1.0"
 description = "Framework for building ERP data migration transformers faster"
-readme = "SPEC.md"
+readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Senuka Dinujaya" }]
+keywords = ["data-migration", "pandas", "ERP", "transformers"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "pandas>=2.0.0",
     "pyarrow>=12.0.0",
 ]
-
-[project.scripts]
-migrator = "migrator_studio.cli.main:main"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
 ]
-preview = [
-    "marimo>=0.8.0",
-    "rich>=13.0.0",
-]
+
+[project.urls]
+Repository = "https://github.com/SenukaDinujaya/migrator-studio"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -32,3 +38,10 @@ addopts = "-v --tb=short"
 
 [tool.hatch.build.targets.wheel]
 packages = ["migrator_studio"]
+
+[tool.coverage.run]
+source = ["migrator_studio"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]

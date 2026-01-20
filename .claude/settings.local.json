@@ -38,7 +38,9 @@
       "Bash(/home/senuka/Documents/migrator-studio/.venv/bin/pytest /home/senuka/Documents/migrator-studio/tests/ -v --tb=short)",
       "Bash(/home/senuka/Documents/migrator-studio/.venv/bin/pytest /home/senuka/Documents/migrator-studio/tests/ --tb=short -q)",
       "WebSearch",
-      "WebFetch(domain:docs.marimo.io)"
+      "WebFetch(domain:docs.marimo.io)",
+      "Bash(xargs:*)",
+      "Bash(head:*)"
     ]
   }
 }

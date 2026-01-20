@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 import pandas as pd
 
-from .._tracking import get_active_session
+from ._tracking import get_active_session
 
 F = TypeVar("F", bound=Callable[..., pd.DataFrame])
 
@@ -38,9 +38,6 @@ def tracked(
 
         @wraps(func)
         def wrapper(df: pd.DataFrame, *args: Any, **kwargs: Any) -> pd.DataFrame:
-            # Check for _display kwarg to suppress display
-            suppress_display = kwargs.pop("_display", True) is False
-
             session = get_active_session()
 
             if session is None:
@@ -69,9 +66,7 @@ def tracked(
                 rows_before=rows_before,
                 rows_after=rows_after,
                 duration_ms=duration_ms,
-                result_df=result,
                 affected_columns=cols,
-                suppress_display=suppress_display,
             )
 
             return result

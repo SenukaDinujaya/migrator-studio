@@ -7,7 +7,7 @@ from typing import Optional
 import pandas as pd
 
 from .config import get_config
-from ._tracking import get_active_session, get_sample_size
+from .ops._tracking import get_active_session, get_sample_size
 
 
 def load_source(
@@ -61,7 +61,6 @@ def load_source(
             rows_before=original_rows,
             rows_after=len(df),
             duration_ms=duration_ms,
-            result_df=df,
             affected_columns=[],
         )
 

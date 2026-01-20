@@ -1,4 +1,12 @@
 from ._base import list_operations, get_operation
+from ._tracking import (
+    OperationRecord,
+    SessionTracker,
+    get_active_session,
+    set_active_session,
+    is_build_mode,
+    get_sample_size,
+)
 
 from .filter import (
     filter_isin,
@@ -70,6 +78,13 @@ __all__ = [
     # Registry
     "list_operations",
     "get_operation",
+    # Tracking
+    "OperationRecord",
+    "SessionTracker",
+    "get_active_session",
+    "set_active_session",
+    "is_build_mode",
+    "get_sample_size",
     # Filter (Pattern 1)
     "filter_isin",
     "filter_not_isin",
