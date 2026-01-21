@@ -106,6 +106,9 @@ from .operations.apply import (
     transform,
 )
 
+# Display
+from .display import preview, summary, diff
+
 __all__ = [
     "__version__",
     "configure",
@@ -170,4 +173,8 @@ __all__ = [
     "apply_row",
     "apply_column",
     "transform",
+    # Display
+    "preview",
+    "summary",
+    "diff",
 ]

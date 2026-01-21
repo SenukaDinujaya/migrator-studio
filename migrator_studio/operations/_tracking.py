@@ -3,7 +3,10 @@ from __future__ import annotations
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 @dataclass
@@ -17,11 +20,20 @@ class OperationRecord:
     affected_columns: list[str] = field(default_factory=list)
 
 
+# Callback type: (record, result_df) -> None
+OnRecordCallback = Callable[["OperationRecord", "pd.DataFrame"], None]
+
+
 class SessionTracker:
-    def __init__(self, sample_size: int):
+    def __init__(
+        self,
+        sample_size: int,
+        on_record: Optional[OnRecordCallback] = None,
+    ):
         self.sample_size = sample_size
         self.operations: list[OperationRecord] = []
         self._start_time = datetime.now()
+        self._on_record = on_record
 
     def record(
         self,
@@ -31,16 +43,21 @@ class SessionTracker:
         rows_after: int,
         duration_ms: float,
         affected_columns: Optional[list[str]] = None,
+        result_df: Optional["pd.DataFrame"] = None,
     ) -> None:
         cols = affected_columns or []
-        self.operations.append(OperationRecord(
+        record = OperationRecord(
             operation=operation,
             params=params,
             rows_before=rows_before,
             rows_after=rows_after,
             duration_ms=duration_ms,
             affected_columns=cols,
-        ))
+        )
+        self.operations.append(record)
+
+        if self._on_record is not None and result_df is not None:
+            self._on_record(record, result_df)
 
     def get_history(self) -> list[OperationRecord]:
         return self.operations.copy()

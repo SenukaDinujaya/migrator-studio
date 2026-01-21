@@ -1,4 +1,4 @@
-"""Backward compatibility - tracking now lives in ops._tracking"""
+"""Backward compatibility - tracking now lives in operations._tracking"""
 from .operations._tracking import (
     OperationRecord,
     SessionTracker,
@@ -6,7 +6,6 @@ from .operations._tracking import (
     set_active_session,
     is_build_mode,
     get_sample_size,
-    _active_session,
 )
 
 __all__ = [

@@ -67,6 +67,7 @@ def tracked(
                 rows_after=rows_after,
                 duration_ms=duration_ms,
                 affected_columns=cols,
+                result_df=result,
             )
 
             return result
