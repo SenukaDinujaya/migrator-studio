@@ -41,7 +41,11 @@
       "WebFetch(domain:docs.marimo.io)",
       "Bash(xargs:*)",
       "Bash(head:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:panda-tea.com)",
+      "WebFetch(domain:www.yelp.com)",
+      "Bash(pip3:*)",
+      "Bash(docker:*)"
     ]
   }
 }

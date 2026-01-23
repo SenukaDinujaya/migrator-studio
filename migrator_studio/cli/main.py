@@ -19,8 +19,13 @@ def cli():
     pass
 
 
+def find_transformers(directory: Path = Path(".")) -> list[Path]:
+    """Find transformer files (TFRM-*.py) in the given directory."""
+    return sorted(directory.glob("TFRM-*.py"))
+
+
 @cli.command()
-@click.argument("transformer", type=click.Path(exists=True, path_type=Path))
+@click.argument("transformer", type=click.Path(exists=True, path_type=Path), required=False)
 @click.option(
     "--output", "-o",
     type=click.Path(path_type=Path),
@@ -37,16 +42,42 @@ def cli():
     is_flag=True,
     help="Generate notebook without opening Marimo.",
 )
-def dev(transformer: Path, output: Path, sample: int, no_run: bool):
+def dev(transformer: Path | None, output: Path, sample: int, no_run: bool):
     """
     Generate a Marimo notebook for interactive development.
 
     TRANSFORMER is the path to the transformer .py file.
+    If not provided, auto-discovers TFRM-*.py files in the current directory.
 
     Examples:
+        migrator dev
         migrator dev sample/TFRM-EXAMPLE-001.py
         migrator dev sample/TFRM-EXAMPLE-001.py -o notebooks/dev.nb.py
     """
+    # Auto-discover transformer if not provided
+    if transformer is None:
+        transformers = find_transformers()
+        if not transformers:
+            click.echo("No transformer files (TFRM-*.py) found in current directory.", err=True)
+            click.echo("Provide a path: migrator dev <path/to/transformer.py>")
+            sys.exit(1)
+        elif len(transformers) == 1:
+            transformer = transformers[0]
+            click.echo(f"Auto-detected transformer: {transformer}")
+        else:
+            click.echo("Multiple transformers found:")
+            for i, t in enumerate(transformers, 1):
+                click.echo(f"  {i}. {t.name}")
+
+            # Prompt user to select
+            choice = click.prompt(
+                "\nSelect transformer",
+                type=click.IntRange(1, len(transformers)),
+                default=1,
+            )
+            transformer = transformers[choice - 1]
+            click.echo(f"Selected: {transformer.name}")
+
     click.echo(f"Parsing transformer: {transformer}")
 
     try:
@@ -80,10 +111,11 @@ def dev(transformer: Path, output: Path, sample: int, no_run: bool):
     if not no_run:
         click.echo("Starting Marimo...")
         try:
-            subprocess.run(["marimo", "edit", str(notebook_path)], check=True)
+            # Use uv run to ensure migrator_studio is available in the environment
+            subprocess.run(["uv", "run", "marimo", "edit", str(notebook_path)], check=True)
         except FileNotFoundError:
             click.echo(
-                "Marimo not found. Install with: pip install marimo",
+                "uv or marimo not found. Install marimo with: uv add marimo",
                 err=True,
             )
             click.echo(f"Notebook saved at: {notebook_path}")

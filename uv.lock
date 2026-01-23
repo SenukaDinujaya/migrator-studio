@@ -371,13 +371,13 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "marimo" },
     { name = "pandas" },
     { name = "pyarrow" },
 ]
 
 [package.optional-dependencies]
 dev = [
-    { name = "marimo" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -385,7 +385,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.0.0" },
-    { name = "marimo", marker = "extra == 'dev'", specifier = ">=0.1.0" },
+    { name = "marimo", specifier = ">=0.1.0" },
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pyarrow", specifier = ">=12.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },

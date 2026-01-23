@@ -9,8 +9,15 @@ from typing import Optional
 from .parser import TransformerAST, Step
 
 
-# Common imports to include in notebooks
-NOTEBOOK_IMPORTS = """from pathlib import Path
+# Common imports to include in notebooks (project_root placeholder will be replaced)
+NOTEBOOK_IMPORTS_TEMPLATE = """import sys
+from pathlib import Path
+
+# Add project root to path for migrator_studio imports
+_project_root = Path("{project_root}")
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
 from migrator_studio import configure, BuildSession, load_source
 from migrator_studio import (
     step,
@@ -36,6 +43,16 @@ def _find_used_variables(code: str, available: set[str]) -> list[str]:
         if re.search(rf'\b{var}\b', code):
             used.append(var)
     return sorted(used)
+
+
+def _find_project_root(start_path: Path) -> Path:
+    """Find the project root by looking for pyproject.toml."""
+    current = start_path.resolve()
+    while current.parent != current:
+        if (current / "pyproject.toml").exists():
+            return current
+        current = current.parent
+    return start_path.resolve()
 
 
 def generate_notebook(
@@ -64,14 +81,11 @@ def generate_notebook(
     if output_path is None:
         output_path = transformer_ast.filepath.with_suffix('.nb.py')
 
-    # Make data_path relative to notebook location if possible
-    try:
-        notebook_dir = output_path.parent.resolve()
-        data_path_resolved = Path(data_path).resolve()
-        relative_data_path = os.path.relpath(data_path_resolved, notebook_dir)
-    except ValueError:
-        # On Windows, relpath fails if paths are on different drives
-        relative_data_path = str(data_path_resolved)
+    # Use absolute path for data since Marimo runs from /tmp
+    data_path_resolved = Path(data_path).resolve()
+
+    # Find project root for sys.path
+    project_root = _find_project_root(output_path)
     # Marimo notebook header
     lines = [
         'import marimo',
@@ -97,13 +111,14 @@ def generate_notebook(
         '@app.cell',
         'def __():',
     ])
-    # Add imports inside the cell
-    for import_line in NOTEBOOK_IMPORTS.splitlines():
+    # Add imports inside the cell (with project root for sys.path)
+    notebook_imports = NOTEBOOK_IMPORTS_TEMPLATE.format(project_root=project_root)
+    for import_line in notebook_imports.splitlines():
         lines.append(f'    {import_line}')
     lines.extend([
         f'    ',
-        f'    # Configure data path (relative to notebook location)',
-        f'    configure(data_path=str(Path(__file__).parent / "{relative_data_path}"))',
+        f'    # Configure data path (absolute path since Marimo runs from /tmp)',
+        f'    configure(data_path="{data_path_resolved}")',
         f'    ',
         f'    # Start build session',
         f'    session = BuildSession(sample={sample_size})',
