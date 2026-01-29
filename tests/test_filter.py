@@ -440,17 +440,16 @@ class TestTypeValidation:
         with pytest.raises(FilterTypeError, match="Type mismatch.*duration.*timedelta"):
             filter_by_value(df, "duration", gt=100)
 
-    def test_categorical_value_not_in_categories_warns(self):
-        """Filtering categorical with non-existent value should warn."""
+    def test_categorical_value_not_in_categories_returns_empty(self):
+        """Filtering categorical with non-existent value should return empty.
+
+        Note: Polars converts Categorical to String, losing category metadata.
+        The filter returns 0 rows but no warning is emitted (Polars has no
+        concept of fixed categories on String columns).
+        """
         df = pd.DataFrame({"status": pd.Categorical(["A", "B", "A"])})
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            filter_isin(df, "status", ["Unknown"])
-
-            assert len(w) == 1
-            assert issubclass(w[0].category, FilterValueWarning)
-            assert "not found in categories" in str(w[0].message)
+        result = filter_isin(df, "status", ["Unknown"])
+        assert len(result) == 0
 
     def test_string_dtype_with_int_raises(self):
         """Filtering StringDtype column with int should raise."""
@@ -459,17 +458,16 @@ class TestTypeValidation:
         with pytest.raises(FilterTypeError, match="Type mismatch.*name.*str"):
             filter_by_value(df, "name", eq=123)
 
-    def test_object_dtype_with_non_string_warns(self):
-        """Filtering object dtype with non-string should warn."""
-        df = pd.DataFrame({"data": ["a", "b", "c"]})  # object dtype
+    def test_object_dtype_with_non_string_raises(self):
+        """Filtering string column with non-string should raise.
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        Note: Polars converts pandas object columns (containing strings) to
+        String dtype, which provides strict type validation instead of a warning.
+        """
+        df = pd.DataFrame({"data": ["a", "b", "c"]})  # object dtype → Polars String
+
+        with pytest.raises(FilterTypeError, match="Type mismatch.*data.*str"):
             filter_by_value(df, "data", eq=123)
-
-            assert len(w) == 1
-            assert issubclass(w[0].category, FilterValueWarning)
-            assert "may produce unexpected results" in str(w[0].message)
 
     def test_object_dtype_with_string_no_warning(self):
         """Filtering object dtype with string should not warn."""

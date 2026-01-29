@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
+import polars as pl
 
 from ._base import tracked
 from ._validation import validate_column_exists, validate_columns_exist
@@ -10,10 +10,10 @@ from ._validation import validate_column_exists, validate_columns_exist
 
 @tracked("copy_column", affected_columns=lambda p: [p.get("target", "")])
 def copy_column(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     source: str,
     target: str,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Copy values from one column to another.
 
@@ -26,17 +26,15 @@ def copy_column(
         df = copy_column(df, "first_name", "name")
     """
     validate_column_exists(df, source, "copy_column")
-    result = df.copy()
-    result[target] = result[source]
-    return result
+    return df.with_columns(pl.col(source).alias(target))
 
 
 @tracked("set_value", affected_columns=lambda p: [p.get("column", "")])
 def set_value(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
     value: Any,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Set a constant value for a column.
 
@@ -48,18 +46,16 @@ def set_value(
     Example:
         df = set_value(df, "company", "ArrowCorp")
     """
-    result = df.copy()
-    result[column] = value
-    return result
+    return df.with_columns(pl.lit(value).alias(column))
 
 
 @tracked("concat_columns", affected_columns=lambda p: [p.get("target", "")])
 def concat_columns(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     columns: list[str],
     target: str,
     sep: str = " ",
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Concatenate multiple columns into one.
 
@@ -74,17 +70,15 @@ def concat_columns(
         df = concat_columns(df, ["city", "state", "zip"], "address", sep=", ")
     """
     validate_columns_exist(df, columns, "concat_columns")
-    result = df.copy()
-    # Fill NA with empty string to avoid "nan" in output
-    result[target] = result[columns].fillna("").astype(str).agg(sep.join, axis=1)
-    return result
+    exprs = [pl.col(c).fill_null(pl.lit("")).cast(pl.Utf8) for c in columns]
+    return df.with_columns(pl.concat_str(exprs, separator=sep).alias(target))
 
 
 @tracked("rename_columns", affected_columns=lambda p: list(p.get("mapping", {}).values()))
 def rename_columns(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     mapping: dict[str, str],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Rename columns using a mapping dict.
 
@@ -95,21 +89,20 @@ def rename_columns(
     Example:
         df = rename_columns(df, {"old_name": "new_name", "col1": "column_one"})
     """
-    # Validate source columns exist
     missing = [col for col in mapping if col not in df.columns]
     if missing:
         raise KeyError(
             f"rename_columns failed: Columns {missing} not found in DataFrame. "
             f"Available columns: {list(df.columns)}."
         )
-    return df.rename(columns=mapping)
+    return df.rename(mapping)
 
 
 @tracked("drop_columns", affected_columns=lambda p: p.get("columns", []))
 def drop_columns(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     columns: list[str],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Drop specified columns.
 
@@ -121,14 +114,14 @@ def drop_columns(
         df = drop_columns(df, ["temp_col", "unused_col"])
     """
     validate_columns_exist(df, columns, "drop_columns")
-    return df.drop(columns=columns)
+    return df.drop(columns)
 
 
 @tracked("select_columns", affected_columns=lambda p: p.get("columns", []))
 def select_columns(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     columns: list[str],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Keep only specified columns (select/project).
 
@@ -140,7 +133,7 @@ def select_columns(
         df = select_columns(df, ["id", "name", "status"])
     """
     validate_columns_exist(df, columns, "select_columns")
-    return df[columns].copy()
+    return df.select(columns)
 
 
 __all__ = ["copy_column", "set_value", "concat_columns", "rename_columns", "drop_columns", "select_columns"]

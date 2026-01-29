@@ -14,7 +14,20 @@
       "Bash(uv run python -m pytest:*)",
       "Bash(uv pip install:*)",
       "Bash(uv run python -m ruff check:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(git -C /home/senuka/Documents/migrator_studio log --oneline -15)",
+      "Bash(git -C /home/senuka/Documents/migrator_studio branch -a)",
+      "Bash(git -C /home/senuka/Documents/migrator_studio log --oneline main...polaris_edition)",
+      "Bash(git -C /home/senuka/Documents/migrator_studio log --oneline polaris_edition)",
+      "Bash(git -C /home/senuka/Documents/migrator_studio show --stat 5d27a5f)",
+      "Bash(git -C /home/senuka/Documents/migrator_studio log --format=\"%h %s\" main)",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(/home/senuka/Documents/migrator_studio/.venv/bin/pip install:*)",
+      "Bash(/home/senuka/Documents/migrator_studio/.venv/bin/python -m pip install:*)",
+      "Bash(/home/senuka/Documents/migrator_studio/.venv/bin/python:*)",
+      "Bash(.venv/bin/pytest:*)",
+      "Bash(/home/senuka/Documents/migrator_studio/.venv/bin/pytest:*)"
     ]
   }
 }

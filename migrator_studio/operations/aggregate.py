@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pandas as pd
+import polars as pl
 
 from ._base import tracked
 from ._validation import validate_column_exists, validate_columns_exist
@@ -18,61 +18,71 @@ def _get_agg_columns(p: dict) -> list[str]:
     return cols
 
 
+_AGG_MAP = {
+    "sum": lambda c: pl.col(c).sum(),
+    "mean": lambda c: pl.col(c).mean(),
+    "min": lambda c: pl.col(c).min(),
+    "max": lambda c: pl.col(c).max(),
+    "count": lambda c: pl.col(c).count(),
+    "first": lambda c: pl.col(c).first(),
+    "last": lambda c: pl.col(c).last(),
+    "std": lambda c: pl.col(c).std(),
+    "var": lambda c: pl.col(c).var(),
+    "median": lambda c: pl.col(c).median(),
+}
+
+
 @tracked("groupby_agg", affected_columns=_get_agg_columns)
 def groupby_agg(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     by: str | list[str],
     agg: dict[str, str | list[str]],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Group by columns and aggregate.
 
     Args:
         df: Input DataFrame
         by: Column(s) to group by
-        agg: Aggregation specification - dict mapping column names to
-             aggregation function(s). Functions can be: 'sum', 'mean',
-             'min', 'max', 'count', 'first', 'last', 'std', 'var', etc.
+        agg: Aggregation specification — dict mapping column names to
+             aggregation function(s).
 
     Example:
-        # Single aggregation per column
         df = groupby_agg(df, "region", {"amount": "sum", "qty": "sum"})
-
-        # Multiple aggregations per column
-        df = groupby_agg(df, ["region", "category"], {
-            "amount": ["sum", "mean"],
-            "qty": "sum"
-        })
+        df = groupby_agg(df, ["region", "category"], {"amount": ["sum", "mean"]})
     """
     validate_columns_exist(df, by, "groupby_agg")
-
-    # Validate agg columns exist
     for col in agg:
         validate_column_exists(df, col, "groupby_agg")
 
     if isinstance(by, str):
         by = [by]
 
-    result = df.groupby(by, as_index=False).agg(agg)
+    exprs = []
+    for col, funcs in agg.items():
+        if isinstance(funcs, str):
+            funcs = [funcs]
+        for func_name in funcs:
+            if func_name not in _AGG_MAP:
+                raise ValueError(
+                    f"groupby_agg: Unknown aggregation function '{func_name}'. "
+                    f"Available: {list(_AGG_MAP.keys())}"
+                )
+            # If multiple funcs for same col, suffix with func name
+            alias = f"{col}_{func_name}" if len(funcs) > 1 else col
+            exprs.append(_AGG_MAP[func_name](col).alias(alias))
 
-    # Flatten multi-level column names if present
-    if isinstance(result.columns, pd.MultiIndex):
-        result.columns = [
-            f"{col}_{func}" if func else col
-            for col, func in result.columns
-        ]
-
-    return result.reset_index(drop=True)
+    return df.group_by(by, maintain_order=True).agg(exprs)
 
 
 @tracked("groupby_concat", affected_columns=lambda p: [p.get("target", "")])
 def groupby_concat(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     by: str | list[str],
     column: str,
     target: str,
     sep: str = " ",
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Group and concatenate string values.
 
@@ -85,7 +95,6 @@ def groupby_concat(
 
     Example:
         df = groupby_concat(df, "order_id", "message", "all_messages", sep=" | ")
-        df = groupby_concat(df, ["customer_id", "year"], "item_code", "all_items", sep=", ")
     """
     validate_columns_exist(df, by, "groupby_concat")
     validate_column_exists(df, column, "groupby_concat")
@@ -93,12 +102,9 @@ def groupby_concat(
     if isinstance(by, str):
         by = [by]
 
-    # Group and concatenate
-    grouped = df.groupby(by, as_index=False).agg(
-        **{target: (column, lambda x: sep.join(x.dropna().astype(str)))}
+    return df.group_by(by, maintain_order=True).agg(
+        pl.col(column).drop_nulls().cast(pl.Utf8).str.join(sep).alias(target)
     )
-
-    return grouped.reset_index(drop=True)
 
 
 __all__ = ["groupby_agg", "groupby_concat"]

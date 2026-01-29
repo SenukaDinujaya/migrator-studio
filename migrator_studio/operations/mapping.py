@@ -2,36 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
+import polars as pl
 
 from ._base import tracked
+from ._polars_compat import ensure_polars
 from ._validation import validate_columns_exist
-
-
-def _get_lookup_series(
-    df: pd.DataFrame,
-    column: str | list[str],
-) -> pd.Series:
-    """Get a Series to use for lookup (single value or tuple for multi-column)."""
-    if isinstance(column, str):
-        return df[column]
-
-    # Multi-column: create tuple series
-    return pd.Series(list(zip(*[df[col] for col in column])), index=df.index)
-
-
-def _apply_fallback(
-    mapped: pd.Series,
-    original: pd.Series,
-    fallback: Any | None,
-    fallback_original: bool,
-) -> pd.Series:
-    """Apply fallback logic to mapped values."""
-    if fallback_original:
-        return mapped.fillna(original)
-    elif fallback is not None:
-        return mapped.fillna(fallback)
-    return mapped
 
 
 def _resolve_target(
@@ -62,110 +37,110 @@ def _get_map_target(p: dict) -> list[str]:
 
 @tracked("map_dict", affected_columns=_get_map_target)
 def map_dict(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str | list[str],
     mapping: dict[Any, Any],
     *,
     target: str | None = None,
     fallback: Any | None = None,
     fallback_original: bool = False,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Map values in column(s) using a dictionary.
 
     Args:
         df: Input DataFrame
-        column: Source column(s) to map from. Can be a single column name or
-            a list of columns for multi-column keys.
+        column: Source column(s) to map from.
         mapping: Dictionary mapping source values to target values.
-            For multi-column source, dict keys must be tuples.
-        target: Where to store the result. If not specified, replaces
-            the source column. Required when using multi-column keys.
-        fallback: Value to use for unmapped values (default: NA)
+        target: Where to store the result.
+        fallback: Value to use for unmapped values (default: null)
         fallback_original: If True, keep original value for unmapped entries.
 
     Example:
-        # Single column mapping
         df = map_dict(df, "status", {"A": "Active", "P": "Pending"})
-
-        # Multi-column key
-        df = map_dict(df, ["branch", "region"],
-                      {("B1", "R1"): "Territory A", ("B2", "R2"): "Territory B"},
-                      target="territory")
-
-        # Create new column instead of replacing
-        df = map_dict(df, "status", {"A": "Active"}, target="status_text")
-
-        # Keep original value for unmapped entries
-        df = map_dict(df, "status", {"A": "Active"}, fallback_original=True)
     """
     validate_columns_exist(df, column, "map_dict")
-
-    result = df.copy()
     target_col = _resolve_target(column, target, "map_dict")
 
-    lookup_series = _get_lookup_series(df, column)
-    mapped = lookup_series.map(mapping)
-
     if isinstance(column, str):
-        original_values = df[column]
+        # Single column mapping — use Polars replace
+        default = None
+        if fallback_original:
+            # Use replace with default=keep original
+            return df.with_columns(
+                pl.col(column).replace(mapping, default=pl.col(column)).alias(target_col)
+            )
+        elif fallback is not None:
+            return df.with_columns(
+                pl.col(column).replace(mapping, default=fallback).alias(target_col)
+            )
+        else:
+            return df.with_columns(
+                pl.col(column).replace(mapping, default=None).alias(target_col)
+            )
     else:
-        original_values = lookup_series
+        # Multi-column key: build a lookup DataFrame and join
+        keys = list(mapping.keys())
+        values = list(mapping.values())
 
-    result[target_col] = _apply_fallback(mapped, original_values, fallback, fallback_original)
+        # keys are tuples
+        lookup_data = {f"_key_{i}": [k[i] for k in keys] for i in range(len(column))}
+        lookup_data["_mapped_value"] = values
+        lookup_df = pl.DataFrame(lookup_data)
 
-    return result
+        left_on = list(column)
+        right_on = [f"_key_{i}" for i in range(len(column))]
+
+        result = df.join(lookup_df, left_on=left_on, right_on=right_on, how="left")
+
+        if fallback_original:
+            # For multi-column, fallback_original doesn't have a single original col
+            result = result.rename({"_mapped_value": target_col})
+        elif fallback is not None:
+            result = result.with_columns(
+                pl.col("_mapped_value").fill_null(fallback).alias(target_col)
+            )
+            if "_mapped_value" != target_col:
+                result = result.drop("_mapped_value")
+        else:
+            result = result.rename({"_mapped_value": target_col})
+
+        return result
 
 
 @tracked("map_lookup", affected_columns=_get_map_target)
 def map_lookup(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str | list[str],
-    lookup_df: pd.DataFrame,
+    lookup_df: pl.DataFrame,
     key_column: str | list[str],
     value_column: str,
     *,
     target: str | None = None,
     fallback: Any | None = None,
     fallback_original: bool = False,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Map values in column(s) using a DataFrame lookup table.
 
     Args:
         df: Input DataFrame
-        column: Source column(s) to map from. Can be a single column name or
-            a list of columns for multi-column keys.
+        column: Source column(s) to map from.
         lookup_df: DataFrame containing the lookup table.
-        key_column: Column(s) in lookup_df to match against. Must match
-            the structure of column (single vs list).
+        key_column: Column(s) in lookup_df to match against.
         value_column: Column in lookup_df containing the target values.
-        target: Where to store the result. If not specified, replaces
-            the source column. Required when using multi-column keys.
-        fallback: Value to use for unmapped values (default: NA)
+        target: Where to store the result.
+        fallback: Value for unmapped values (default: null)
         fallback_original: If True, keep original value for unmapped entries.
 
     Example:
-        # Single column lookup
-        df = map_lookup(df, "region_code", regions_df,
-                        key_column="code", value_column="name")
-
-        # Multi-column key lookup
-        df = map_lookup(df, ["branch", "region"], lookup_df,
-                        key_column=["branch_code", "region_code"],
-                        value_column="territory_name",
-                        target="territory")
-
-        # Create new column
-        df = map_lookup(df, "code", lookup_df,
-                        key_column="code", value_column="name",
-                        target="full_name")
+        df = map_lookup(df, "region_code", regions_df, key_column="code", value_column="name")
     """
     validate_columns_exist(df, column, "map_lookup")
+    lookup_df = ensure_polars(lookup_df)
     validate_columns_exist(lookup_df, key_column, "map_lookup")
     validate_columns_exist(lookup_df, value_column, "map_lookup")
 
-    # Validate column count matches
     source_cols = [column] if isinstance(column, str) else column
     key_cols = [key_column] if isinstance(key_column, str) else key_column
     if len(source_cols) != len(key_cols):
@@ -174,27 +149,39 @@ def map_lookup(
             f"key_column count ({len(key_cols)})."
         )
 
-    # Build mapping dict from lookup DataFrame
-    if isinstance(key_column, str):
-        mapping_dict = lookup_df.set_index(key_column)[value_column].to_dict()
-    else:
-        # Multi-column key: create tuple index
-        lookup_copy = lookup_df.copy()
-        lookup_copy["_tuple_key"] = list(zip(*[lookup_copy[col] for col in key_column]))
-        mapping_dict = lookup_copy.set_index("_tuple_key")[value_column].to_dict()
-
-    result = df.copy()
     target_col = _resolve_target(column, target, "map_lookup")
 
-    lookup_series = _get_lookup_series(df, column)
-    mapped = lookup_series.map(mapping_dict)
+    # Select only needed columns from lookup
+    lookup_subset = lookup_df.select(list(set(key_cols + [value_column])))
 
-    if isinstance(column, str):
-        original_values = df[column]
-    else:
-        original_values = lookup_series
+    # Rename value_column in lookup to a temp name to avoid any clashes
+    temp_val_col = f"__lookup_val_{value_column}__"
+    lookup_subset = lookup_subset.rename({value_column: temp_val_col})
 
-    result[target_col] = _apply_fallback(mapped, original_values, fallback, fallback_original)
+    # Join
+    result = df.join(
+        lookup_subset,
+        left_on=source_cols,
+        right_on=key_cols,
+        how="left",
+    )
+
+    # If target_col already exists (e.g., replacing source column), drop it first
+    if target_col in result.columns and target_col != temp_val_col:
+        result = result.drop(target_col)
+
+    # Rename temp column to target
+    result = result.rename({temp_val_col: target_col})
+
+    # Apply fallback
+    if fallback_original and isinstance(column, str):
+        result = result.with_columns(
+            pl.col(target_col).fill_null(pl.col(column)).alias(target_col)
+        )
+    elif fallback is not None:
+        result = result.with_columns(
+            pl.col(target_col).fill_null(fallback).alias(target_col)
+        )
 
     return result
 

@@ -2,47 +2,56 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
 import pandas as pd
+import polars as pl
 
 from ._base import tracked
+from ._polars_compat import ensure_polars_series
 from ._validation import validate_column_exists, validate_columns_exist
 
 
 @tracked("where", affected_columns=lambda p: [p.get("column", "")])
 def where(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
-    condition: pd.Series,
+    condition: pl.Series | pl.Expr | pd.Series,
     then_value: Any,
     else_value: Any = None,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
-    Simple if-else assignment using np.where.
+    Simple if-else assignment.
 
     Args:
         df: Input DataFrame
         column: Target column name for the result
-        condition: Boolean Series (e.g., df['amount'] > 100)
+        condition: Boolean Series or Polars Expr
         then_value: Value when condition is True
-        else_value: Value when condition is False (default: None/NaN)
+        else_value: Value when condition is False (default: None/null)
 
     Example:
         df = where(df, "priority", df["amount"] > 1000, "High", "Normal")
-        df = where(df, "discounted", df["qty"] >= 10, True, False)
     """
-    result = df.copy()
-    result[column] = np.where(condition, then_value, else_value)
-    return result
+    if isinstance(condition, pd.Series):
+        condition = ensure_polars_series(condition)
+
+    if isinstance(condition, pl.Series):
+        return df.with_columns(
+            pl.when(condition).then(pl.lit(then_value)).otherwise(pl.lit(else_value)).alias(column)
+        )
+
+    # condition is a pl.Expr
+    return df.with_columns(
+        pl.when(condition).then(pl.lit(then_value)).otherwise(pl.lit(else_value)).alias(column)
+    )
 
 
 @tracked("case", affected_columns=lambda p: [p.get("column", "")])
 def case(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
-    conditions: list[tuple[pd.Series, Any]],
+    conditions: list[tuple[pl.Series | pl.Expr | pd.Series, Any]],
     default: Any = None,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Multiple condition assignment (like SQL CASE WHEN).
 
@@ -50,7 +59,7 @@ def case(
         df: Input DataFrame
         column: Target column name for the result
         conditions: List of (condition, value) tuples, evaluated in order
-        default: Value when no condition matches (default: None/NaN)
+        default: Value when no condition matches (default: None/null)
 
     Example:
         df = case(df, "priority", [
@@ -58,16 +67,22 @@ def case(
             (df["amount"] > 500, "Medium"),
         ], default="Low")
     """
-    result = df.copy()
+    if not conditions:
+        return df.with_columns(pl.lit(default).alias(column))
 
-    # Start with default value
-    result[column] = default
+    # Build chained when/then
+    first_cond, first_val = conditions[0]
+    if isinstance(first_cond, pd.Series):
+        first_cond = ensure_polars_series(first_cond)
+    expr = pl.when(first_cond).then(pl.lit(first_val))
 
-    # Apply conditions in reverse order so first match wins
-    for condition, value in reversed(conditions):
-        result.loc[condition, column] = value
+    for cond, val in conditions[1:]:
+        if isinstance(cond, pd.Series):
+            cond = ensure_polars_series(cond)
+        expr = expr.when(cond).then(pl.lit(val))
 
-    return result
+    expr = expr.otherwise(pl.lit(default))
+    return df.with_columns(expr.alias(column))
 
 
 def _get_fill_null_target(p: dict) -> list[str]:
@@ -80,12 +95,12 @@ def _get_fill_null_target(p: dict) -> list[str]:
 
 @tracked("fill_null", affected_columns=_get_fill_null_target)
 def fill_null(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
     value: Any,
     *,
     target: str | None = None,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Fill null/NA values in a column.
 
@@ -97,21 +112,18 @@ def fill_null(
 
     Example:
         df = fill_null(df, "email", "no-email@example.com")
-        df = fill_null(df, "quantity", 0)
     """
     validate_column_exists(df, column, "fill_null")
-    result = df.copy()
     target_col = target if target is not None else column
-    result[target_col] = result[column].fillna(value)
-    return result
+    return df.with_columns(pl.col(column).fill_null(value).alias(target_col))
 
 
 @tracked("coalesce", affected_columns=lambda p: [p.get("target", "")])
 def coalesce(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     columns: list[str],
     target: str,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Get first non-null value from a list of columns.
 
@@ -121,20 +133,12 @@ def coalesce(
         target: Target column name for the result
 
     Example:
-        df = coalesce(df, ["phone_primary", "phone_mobile", "phone_work"], "contact_phone")
-        df = coalesce(df, ["MailContact", "ShipContact"], "primary_contact")
+        df = coalesce(df, ["phone_primary", "phone_mobile"], "contact_phone")
     """
     validate_columns_exist(df, columns, "coalesce")
-    result = df.copy()
-
-    # Start with first column
-    result[target] = result[columns[0]]
-
-    # Fill with subsequent columns
-    for col in columns[1:]:
-        result[target] = result[target].fillna(result[col])
-
-    return result
+    return df.with_columns(
+        pl.coalesce([pl.col(c) for c in columns]).alias(target)
+    )
 
 
 __all__ = ["where", "case", "fill_null", "coalesce"]

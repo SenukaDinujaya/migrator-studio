@@ -2,9 +2,11 @@
 TFRM-EXAMPLE-001: Customer Transformer
 
 Transforms customer data from legacy ERP format to target format.
+Uses Polars fast path — convert once at input, once at output.
 """
 from pandas import DataFrame
 
+import polars as pl
 from migrator_studio import (
     step,
     filter_isin,
@@ -28,9 +30,10 @@ SOURCES = ["DAT-00000001", "DAT-00000005", "DAT-00000006"]
 
 def transform(sources: dict[str, DataFrame]) -> DataFrame:
     """Transform customer data to target format."""
-    customers = sources["DAT-00000001"]
-    regions = sources["DAT-00000005"]
-    statuses = sources["DAT-00000006"]
+    # Convert to Polars once at boundary
+    customers = pl.from_pandas(sources["DAT-00000001"])
+    regions = pl.from_pandas(sources["DAT-00000005"])
+    statuses = pl.from_pandas(sources["DAT-00000006"])
 
     step("Sanitize data")
     df = sanitize_data(customers, empty_val=None)
@@ -51,7 +54,13 @@ def transform(sources: dict[str, DataFrame]) -> DataFrame:
     )
 
     step("Map status codes")
-    status_map = statuses.set_index("StatusCode")["StatusDesc"].to_dict()
+    # Build mapping from statuses Polars DataFrame
+    status_map = dict(
+        zip(
+            statuses["StatusCode"].to_list(),
+            statuses["StatusDesc"].to_list(),
+        )
+    )
     df = map_dict(df, "Status", status_map, target="StatusText")
 
     step("Clean string fields")
@@ -76,7 +85,7 @@ def transform(sources: dict[str, DataFrame]) -> DataFrame:
     df = where(
         df,
         column="priority",
-        condition=df["Region"].isin(["NA", "EU"]),
+        condition=pl.col("Region").is_in(["NA", "EU"]),
         then_value="High",
         else_value="Normal",
     )
@@ -112,4 +121,5 @@ def transform(sources: dict[str, DataFrame]) -> DataFrame:
         },
     )
 
-    return df
+    # Convert back to pandas at boundary
+    return df.to_pandas()

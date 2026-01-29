@@ -4,19 +4,25 @@ from collections.abc import Callable
 from typing import Any
 
 import pandas as pd
+import polars as pl
 
 from ._base import tracked
+from ._polars_compat import ensure_polars, to_pandas
 from ._validation import validate_column_exists
 
 
 @tracked("apply_row", affected_columns=lambda p: [p.get("target", "")])
 def apply_row(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     func: Callable[[pd.Series], Any],
     target: str,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Apply a function to each row, store result in target column.
+
+    Note: This operation converts to pandas internally since user lambdas
+    expect pandas Series rows. Not vectorizable — use Polars expressions
+    where possible for better performance.
 
     Args:
         df: Input DataFrame
@@ -24,23 +30,13 @@ def apply_row(
         target: Target column name for the result
 
     Example:
-        # Create full name from parts
         df = apply_row(df, lambda row: f"{row['first']} {row['last']}", "full_name")
-
-        # Calculate total
-        df = apply_row(df, lambda row: row['price'] * row['qty'], "total")
-
-        # Build child table
-        def create_items(row):
-            items = []
-            if pd.notna(row['Item1']):
-                items.append({'code': row['Item1'], 'qty': row['Qty1']})
-            return items
-        df = apply_row(df, create_items, "items")
     """
-    result = df.copy()
-    result[target] = df.apply(func, axis=1)
-    return result
+    pdf = to_pandas(df)
+    # Ensure None values stay as None (not NaN) for user lambdas
+    pdf = pdf.where(pdf.notna(), None)
+    pdf[target] = pdf.apply(func, axis=1)
+    return ensure_polars(pdf)
 
 
 def _get_apply_column_target(p: dict) -> list[str]:
@@ -53,14 +49,16 @@ def _get_apply_column_target(p: dict) -> list[str]:
 
 @tracked("apply_column", affected_columns=_get_apply_column_target)
 def apply_column(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
     func: Callable[[Any], Any],
     *,
     target: str | None = None,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Apply a function to each value in a column.
+
+    Note: Converts to pandas internally for user lambda compatibility.
 
     Args:
         df: Input DataFrame
@@ -69,49 +67,40 @@ def apply_column(
         target: Target column name (default: replace source column)
 
     Example:
-        # Clean phone numbers
         df = apply_column(df, "phone", lambda x: x.replace("-", "") if x else x)
-
-        # Extract domain from email
-        df = apply_column(df, "email", lambda x: x.split("@")[1] if "@" in str(x) else None, target="domain")
     """
     validate_column_exists(df, column, "apply_column")
-    result = df.copy()
+    pdf = to_pandas(df)
+    # Ensure None values stay as None (not NaN) for user lambdas
+    pdf = pdf.where(pdf.notna(), None)
     target_col = target if target is not None else column
-    result[target_col] = result[column].apply(func)
-    return result
+    pdf[target_col] = pdf[column].apply(func)
+    return ensure_polars(pdf)
 
 
 @tracked("transform", affected_columns=lambda p: [])
 def transform(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     func: Callable[[pd.DataFrame], pd.DataFrame],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Apply an arbitrary transformation function to the DataFrame.
 
-    This is the escape hatch for complex transformations that don't fit
-    other patterns. The function receives the full DataFrame and must
-    return a DataFrame.
+    Note: Converts to/from pandas for user function compatibility.
 
     Args:
         df: Input DataFrame
         func: Function that takes a DataFrame and returns a DataFrame
 
     Example:
-        # Custom pivot operation
         def pivot_data(df):
             return df.pivot_table(index='id', columns='category', values='amount')
         df = transform(df, pivot_data)
-
-        # Complex multi-step transformation
-        def complex_transform(df):
-            df = df[df['status'] == 'Active']
-            df['total'] = df['price'] * df['qty']
-            return df.groupby('region').agg({'total': 'sum'})
-        df = transform(df, complex_transform)
     """
-    return func(df.copy())
+    pdf = to_pandas(df)
+    pdf = pdf.where(pdf.notna(), None)
+    result = func(pdf.copy())
+    return ensure_polars(result)
 
 
 __all__ = ["apply_row", "apply_column", "transform"]

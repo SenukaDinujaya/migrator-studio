@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
+import polars as pl
 
 from ._base import tracked
 from ._validation import (
@@ -17,10 +18,10 @@ from ._validation import (
 
 @tracked("filter_isin", affected_columns=lambda p: [])
 def filter_isin(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
     values: Sequence[Any],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Keep rows where column value is in the given list.
 
@@ -33,16 +34,16 @@ def filter_isin(
         df = filter_isin(df, "status", ["Active", "Pending"])
     """
     validate_column_exists(df, column, "filter_isin")
-    validate_membership_values(df[column], values, "filter_isin")
-    return df[df[column].isin(values)].reset_index(drop=True)
+    validate_membership_values(df, column, values, "filter_isin")
+    return df.filter(pl.col(column).is_in(list(values)))
 
 
 @tracked("filter_not_isin", affected_columns=lambda p: [])
 def filter_not_isin(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
     values: Sequence[Any],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Keep rows where column value is NOT in the given list.
 
@@ -55,13 +56,13 @@ def filter_not_isin(
         df = filter_not_isin(df, "status", ["Deleted", "Archived"])
     """
     validate_column_exists(df, column, "filter_not_isin")
-    validate_membership_values(df[column], values, "filter_not_isin")
-    return df[~df[column].isin(values)].reset_index(drop=True)
+    validate_membership_values(df, column, values, "filter_not_isin")
+    return df.filter(~pl.col(column).is_in(list(values)))
 
 
 @tracked("filter_by_value", affected_columns=lambda p: [])
 def filter_by_value(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
     *,
     eq: Any | None = None,
@@ -70,7 +71,7 @@ def filter_by_value(
     gte: Any | None = None,
     lt: Any | None = None,
     lte: Any | None = None,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Filter rows by value conditions. Multiple conditions are ANDed together.
 
@@ -85,9 +86,8 @@ def filter_by_value(
         lte: Keep rows where column <= value
 
     Examples:
-        filter_by_value(df, "amount", gt=100)              # amount > 100
-        filter_by_value(df, "amount", gte=100, lte=500)    # 100 <= amount <= 500
-        filter_by_value(df, "amount", gt=100, ne=200)      # amount > 100 AND != 200
+        filter_by_value(df, "amount", gt=100)
+        filter_by_value(df, "amount", gte=100, lte=500)
     """
     conditions = {"eq": eq, "ne": ne, "gt": gt, "gte": gte, "lt": lt, "lte": lte}
     provided = {k: v for k, v in conditions.items() if v is not None}
@@ -99,33 +99,39 @@ def filter_by_value(
         )
 
     validate_column_exists(df, column, "filter_by_value")
-    series = df[column]
 
-    # Validate all provided values
     for value in provided.values():
-        validate_comparable(series, value, "filter_by_value")
+        validate_comparable(df, column, value, "filter_by_value")
 
-    # Build combined mask - start with all True
-    mask = pd.Series([True] * len(df), index=df.index)
+    col = pl.col(column)
+    dtype = df.schema[column]
+
+    def _coerce_value(val: Any) -> Any:
+        """Coerce comparison value for Polars datetime columns."""
+        if dtype.is_temporal() and isinstance(val, str):
+            return pd.to_datetime(val)
+        return val
+
+    expr = pl.lit(True)
 
     if eq is not None:
-        mask &= series == eq
+        expr = expr & (col == _coerce_value(eq))
     if ne is not None:
-        mask &= series != ne
+        expr = expr & (col != _coerce_value(ne))
     if gt is not None:
-        mask &= series > gt
+        expr = expr & (col > _coerce_value(gt))
     if gte is not None:
-        mask &= series >= gte
+        expr = expr & (col >= _coerce_value(gte))
     if lt is not None:
-        mask &= series < lt
+        expr = expr & (col < _coerce_value(lt))
     if lte is not None:
-        mask &= series <= lte
+        expr = expr & (col <= _coerce_value(lte))
 
-    return df[mask].reset_index(drop=True)
+    return df.filter(expr)
 
 
 @tracked("filter_null", affected_columns=lambda p: [])
-def filter_null(df: pd.DataFrame, column: str) -> pd.DataFrame:
+def filter_null(df: pl.DataFrame, column: str) -> pl.DataFrame:
     """
     Keep only rows where column is null/NA.
 
@@ -134,14 +140,14 @@ def filter_null(df: pd.DataFrame, column: str) -> pd.DataFrame:
         column: Column name to check
 
     Example:
-        df = filter_null(df, "email")  # Keep rows where email is null
+        df = filter_null(df, "email")
     """
     validate_column_exists(df, column, "filter_null")
-    return df[df[column].isna()].reset_index(drop=True)
+    return df.filter(pl.col(column).is_null())
 
 
 @tracked("filter_not_null", affected_columns=lambda p: [])
-def filter_not_null(df: pd.DataFrame, column: str) -> pd.DataFrame:
+def filter_not_null(df: pl.DataFrame, column: str) -> pl.DataFrame:
     """
     Keep only rows where column is not null/NA.
 
@@ -150,22 +156,22 @@ def filter_not_null(df: pd.DataFrame, column: str) -> pd.DataFrame:
         column: Column name to check
 
     Example:
-        df = filter_not_null(df, "email")  # Keep rows where email has a value
+        df = filter_not_null(df, "email")
     """
     validate_column_exists(df, column, "filter_not_null")
-    return df[df[column].notna()].reset_index(drop=True)
+    return df.filter(pl.col(column).is_not_null())
 
 
 @tracked("filter_date", affected_columns=lambda p: [])
 def filter_date(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     column: str,
     *,
     after: str | datetime | pd.Timestamp | None = None,
     before: str | datetime | pd.Timestamp | None = None,
     on_or_after: str | datetime | pd.Timestamp | None = None,
     on_or_before: str | datetime | pd.Timestamp | None = None,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Filter rows by date conditions. Multiple conditions are ANDed together.
 
@@ -178,8 +184,7 @@ def filter_date(
         on_or_before: Keep rows where date <= value (inclusive)
 
     Examples:
-        filter_date(df, "order_date", after="2025-01-01")                         # cutoff
-        filter_date(df, "order_date", on_or_after="2025-01-01", before="2026-01-01")  # range
+        filter_date(df, "order_date", after="2025-01-01")
     """
     conditions = {
         "after": after,
@@ -197,78 +202,79 @@ def filter_date(
 
     validate_column_exists(df, column, "filter_date")
 
-    # Convert column to datetime
-    date_col = pd.to_datetime(df[column], errors="coerce")
+    # Ensure column is datetime — try cast first, then str parse
+    dtype = df.schema[column]
+    if dtype == pl.Utf8 or dtype == pl.String:
+        date_col = pl.col(column).str.to_datetime(strict=False)
+    elif dtype.is_temporal():
+        date_col = pl.col(column)
+    else:
+        date_col = pl.col(column).cast(pl.Datetime, strict=False)
 
-    # Build combined mask
-    mask = pd.Series([True] * len(df), index=df.index)
+    expr = pl.lit(True)
 
     if after is not None:
         after_dt = validate_date_value(after, "after", "filter_date")
-        mask &= date_col > after_dt
+        expr = expr & (date_col > pl.lit(after_dt).cast(pl.Datetime))
 
     if before is not None:
         before_dt = validate_date_value(before, "before", "filter_date")
-        mask &= date_col < before_dt
+        expr = expr & (date_col < pl.lit(before_dt).cast(pl.Datetime))
 
     if on_or_after is not None:
         on_or_after_dt = validate_date_value(on_or_after, "on_or_after", "filter_date")
-        mask &= date_col >= on_or_after_dt
+        expr = expr & (date_col >= pl.lit(on_or_after_dt).cast(pl.Datetime))
 
     if on_or_before is not None:
         on_or_before_dt = validate_date_value(on_or_before, "on_or_before", "filter_date")
-        mask &= date_col <= on_or_before_dt
+        expr = expr & (date_col <= pl.lit(on_or_before_dt).cast(pl.Datetime))
 
-    return df[mask].reset_index(drop=True)
+    return df.filter(expr)
 
 
 @tracked("sanitize_data", affected_columns=lambda p: [])
 def sanitize_data(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     *,
     ignore_cols: list[str] | None = None,
     strip_whitespace: bool = True,
     empty_val: str | None = "",
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Clean the entire DataFrame by stripping whitespace and optionally replacing empty strings.
-
-    Applies to all string/object columns except those in ignore_cols.
 
     Args:
         df: Input DataFrame
         ignore_cols: List of column names to skip (default: None)
-        strip_whitespace: Strip leading/trailing whitespace from strings (default: True)
-        empty_val: Value to use for empty strings (default: "" keeps them as-is).
-                   Set to None to convert empty strings to null.
+        strip_whitespace: Strip leading/trailing whitespace (default: True)
+        empty_val: Value to use for empty strings (default: ""). Set to None to convert to null.
 
     Example:
-        df = sanitize_data(df)  # Strip whitespace, keep empty strings
-        df = sanitize_data(df, empty_val=None)  # Strip whitespace, convert empty to null
-        df = sanitize_data(df, ignore_cols=["raw_data"])  # Skip certain columns
+        df = sanitize_data(df)
+        df = sanitize_data(df, empty_val=None)
     """
-    result = df.copy()
     ignore_cols = ignore_cols or []
+    exprs = []
 
-    for col in result.columns:
-        if col in ignore_cols:
+    for col_name in df.columns:
+        if col_name in ignore_cols:
             continue
 
-        # Only process string/object columns
-        if result[col].dtype == "object":
+        dtype = df.schema[col_name]
+        if dtype == pl.Utf8 or dtype == pl.String:
+            col_expr = pl.col(col_name)
             if strip_whitespace:
-                # Strip whitespace, keeping NaN as NaN
-                result[col] = result[col].apply(
-                    lambda x: x.strip() if isinstance(x, str) else x
-                )
-
+                col_expr = col_expr.str.strip_chars()
             if empty_val != "":
-                # Convert empty strings to specified value
-                result[col] = result[col].apply(
-                    lambda x, ev=empty_val: ev if isinstance(x, str) and x == "" else x
-                )
+                if empty_val is None:
+                    col_expr = pl.when(col_expr == "").then(None).otherwise(col_expr)
+                else:
+                    col_expr = pl.when(col_expr == "").then(pl.lit(empty_val)).otherwise(col_expr)
+            exprs.append(col_expr.alias(col_name))
 
-    return result
+    if exprs:
+        return df.with_columns(exprs)
+    return df
 
 
 __all__ = ["filter_isin", "filter_not_isin", "filter_by_value", "filter_null", "filter_not_null", "filter_date", "sanitize_data"]

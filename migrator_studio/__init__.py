@@ -11,11 +11,13 @@ Example:
 
 __version__ = "0.1.0"
 
+import polars as pl
+
 from .config import configure, get_config
 
 # Display
 from .display import diff, preview, summary
-from .loader import load_source
+from .loader import load_source, load_source_polars
 
 # Registry functions
 from .operations._base import get_operation, list_operations
@@ -111,10 +113,12 @@ from .step import step
 
 __all__ = [
     "__version__",
+    "pl",
     "configure",
     "get_config",
     "BuildSession",
     "load_source",
+    "load_source_polars",
     "step",
     # Registry
     "list_operations",

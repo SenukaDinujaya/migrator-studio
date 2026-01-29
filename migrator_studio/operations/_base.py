@@ -4,13 +4,15 @@ import inspect
 import time
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Union
 
 import pandas as pd
+import polars as pl
 
+from ._polars_compat import DataFrameT, ensure_polars, to_pandas
 from ._tracking import get_active_session
 
-F = TypeVar("F", bound=Callable[..., pd.DataFrame])
+F = TypeVar("F", bound=Callable[..., Union[pd.DataFrame, pl.DataFrame]])
 
 # Operation registry for discoverability
 _OPERATIONS: dict[str, Callable] = {}
@@ -20,46 +22,47 @@ def tracked(
     operation_name: str,
     affected_columns: Callable[[dict], list[str]] | None = None,
 ) -> Callable[[F], F]:
-    """Decorator that tracks operation in build mode. No-op in production.
+    """Decorator that tracks operation in build mode.
 
-    Args:
-        operation_name: Name of the operation for display/logging.
-        affected_columns: Optional callable that takes the operation parameters
-            (as a dict) and returns a list of affected column names. Used for
-            preview display to highlight which columns were modified.
-
-    Example:
-        @tracked("set_value", affected_columns=lambda p: [p.get("column", "")])
-        def set_value(df, column, value):
-            ...
+    Handles polymorphic input: if the first arg is a pd.DataFrame, it is
+    converted to Polars before calling the (now Polars-native) function body,
+    and the result is converted back to pandas. If the first arg is already
+    a pl.DataFrame, it passes straight through with zero conversion.
     """
     def decorator(func: F) -> F:
-        # Register the operation
         _OPERATIONS[operation_name] = func
 
         @wraps(func)
-        def wrapper(df: pd.DataFrame, *args: Any, **kwargs: Any) -> pd.DataFrame:
+        def wrapper(df: DataFrameT, *args: Any, **kwargs: Any) -> DataFrameT:
+            input_is_pandas = isinstance(df, pd.DataFrame)
+
+            # Convert to Polars if needed
+            pl_df = ensure_polars(df) if input_is_pandas else df
+
             session = get_active_session()
 
             if session is None:
-                return func(df, *args, **kwargs)
+                result = func(pl_df, *args, **kwargs)
+                return to_pandas(result) if input_is_pandas else result
 
-            rows_before = len(df)
+            rows_before = len(pl_df)
             start_time = time.perf_counter()
 
-            result = func(df, *args, **kwargs)
+            result = func(pl_df, *args, **kwargs)
 
             duration_ms = (time.perf_counter() - start_time) * 1000
             rows_after = len(result)
             params = _extract_params(func, args, kwargs)
 
-            # Compute affected columns
             cols: list[str] = []
             if affected_columns is not None:
                 try:
                     cols = affected_columns(params)
                 except Exception:
                     cols = []
+
+            # For session recording, convert to pandas for display compatibility
+            result_for_record = to_pandas(result) if isinstance(result, pl.DataFrame) else result
 
             session.record(
                 operation=operation_name,
@@ -68,10 +71,10 @@ def tracked(
                 rows_after=rows_after,
                 duration_ms=duration_ms,
                 affected_columns=cols,
-                result_df=result,
+                result_df=result_for_record,
             )
 
-            return result
+            return to_pandas(result) if input_is_pandas else result
 
         return wrapper  # type: ignore
     return decorator
@@ -85,11 +88,11 @@ def _extract_params(func: Callable, args: tuple, kwargs: dict) -> dict[str, Any]
     for i, value in enumerate(args):
         if i + 1 < len(params):
             name = params[i + 1]
-            if not isinstance(value, pd.DataFrame):
+            if not isinstance(value, (pd.DataFrame, pl.DataFrame)):
                 result[name] = _safe_repr(value)
 
     for name, value in kwargs.items():
-        if not isinstance(value, pd.DataFrame):
+        if not isinstance(value, (pd.DataFrame, pl.DataFrame)):
             result[name] = _safe_repr(value)
 
     return result
