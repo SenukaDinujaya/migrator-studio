@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -21,7 +21,7 @@ def to_numeric(
     df: pd.DataFrame,
     column: str,
     *,
-    target: Optional[str] = None,
+    target: str | None = None,
     errors: str = "coerce",
 ) -> pd.DataFrame:
     """
@@ -49,7 +49,7 @@ def to_int(
     df: pd.DataFrame,
     column: str,
     *,
-    target: Optional[str] = None,
+    target: str | None = None,
     fill: int = 0,
 ) -> pd.DataFrame:
     """
@@ -77,7 +77,7 @@ def to_string(
     df: pd.DataFrame,
     column: str,
     *,
-    target: Optional[str] = None,
+    target: str | None = None,
 ) -> pd.DataFrame:
     """
     Convert column to string type.
@@ -103,8 +103,8 @@ def to_bool(
     df: pd.DataFrame,
     column: str,
     *,
-    target: Optional[str] = None,
-    true_values: Optional[list[Any]] = None,
+    target: str | None = None,
+    true_values: list[Any] | None = None,
 ) -> pd.DataFrame:
     """
     Convert column to boolean type.
@@ -129,3 +129,6 @@ def to_bool(
 
     result[target_col] = result[column].isin(true_values)
     return result
+
+
+__all__ = ["to_numeric", "to_int", "to_string", "to_bool"]

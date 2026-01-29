@@ -1,13 +1,10 @@
 """Generate Marimo notebooks from parsed transformer."""
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
-from typing import Optional
 
-from .parser import TransformerAST, Step
-
+from .parser import TransformerAST
 
 # Common imports to include in notebooks (project_root placeholder will be replaced)
 NOTEBOOK_IMPORTS_TEMPLATE = """import sys
@@ -57,9 +54,9 @@ def _find_project_root(start_path: Path) -> Path:
 
 def generate_notebook(
     transformer_ast: TransformerAST,
-    output_path: Optional[Path] = None,
+    output_path: Path | None = None,
     sample_size: int = 10,
-    data_path: Optional[Path] = None,
+    data_path: Path | None = None,
 ) -> str:
     """
     Generate a Marimo notebook from a parsed transformer.
@@ -90,7 +87,7 @@ def generate_notebook(
     lines = [
         'import marimo',
         '',
-        f'__generated_with = "0.19.0"',
+        '__generated_with = "0.19.0"',
         '',
         'app = marimo.App(width="medium")',
         '',
@@ -116,41 +113,48 @@ def generate_notebook(
     for import_line in notebook_imports.splitlines():
         lines.append(f'    {import_line}')
     lines.extend([
-        f'    ',
-        f'    # Configure data path (absolute path since Marimo runs from /tmp)',
+        '    ',
+        '    # Configure data path (absolute path since Marimo runs from /tmp)',
         f'    configure(data_path="{data_path_resolved}")',
-        f'    ',
-        f'    # Start build session',
+        '    ',
+        '    # Start build session',
         f'    session = BuildSession(sample={sample_size})',
-        f'    session.__enter__()',
-        f'    ',
-        f'    # Return imports and session for other cells',
-        f'    return (',
-        f'        session,',
-        f'        sanitize_data, filter_isin, filter_not_null, filter_null,',
-        f'        merge_left, merge_inner, merge_outer,',
-        f'        map_dict, map_lookup,',
-        f'        copy_column, set_value, concat_columns, rename_columns, drop_columns, select_columns,',
-        f'        str_strip, str_upper, str_lower, str_replace,',
-        f'        fill_null, where, case, coalesce,',
-        f'        drop_duplicates, keep_max, keep_min,',
-        f'        to_numeric, to_int, to_string, to_bool,',
-        f'        load_source,',
-        f'    )',
+        '    session.__enter__()',
+        '    ',
+        '    # Return imports and session for other cells',
+        '    return (',
+        '        session,',
+        '        sanitize_data, filter_isin, filter_not_isin, filter_not_null, filter_null, filter_by_value, filter_date,',
+        '        merge_left, merge_inner, merge_outer,',
+        '        map_dict, map_lookup,',
+        '        copy_column, set_value, concat_columns, rename_columns, drop_columns, select_columns,',
+        '        str_strip, str_upper, str_lower, str_replace, str_regex_replace,',
+        '        fill_null, where, case, coalesce,',
+        '        drop_duplicates, keep_max, keep_min,',
+        '        to_numeric, to_int, to_string, to_bool,',
+        '        parse_date, format_date, extract_date_part, handle_invalid_dates,',
+        '        groupby_agg, groupby_concat,',
+        '        apply_row, apply_column, transform,',
+        '        load_source, step,',
+        '    )',
         '',
     ])
     exported_vars.add('session')
     # Add all the function names as exported
     exported_vars.update([
-        'sanitize_data', 'filter_isin', 'filter_not_null', 'filter_null',
+        'sanitize_data', 'filter_isin', 'filter_not_isin', 'filter_not_null', 'filter_null',
+        'filter_by_value', 'filter_date',
         'merge_left', 'merge_inner', 'merge_outer',
         'map_dict', 'map_lookup',
         'copy_column', 'set_value', 'concat_columns', 'rename_columns', 'drop_columns', 'select_columns',
-        'str_strip', 'str_upper', 'str_lower', 'str_replace',
+        'str_strip', 'str_upper', 'str_lower', 'str_replace', 'str_regex_replace',
         'fill_null', 'where', 'case', 'coalesce',
         'drop_duplicates', 'keep_max', 'keep_min',
         'to_numeric', 'to_int', 'to_string', 'to_bool',
-        'load_source',
+        'parse_date', 'format_date', 'extract_date_part', 'handle_invalid_dates',
+        'groupby_agg', 'groupby_concat',
+        'apply_row', 'apply_column', 'transform',
+        'load_source', 'step',
     ])
 
     # Cell 2: Load sources

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Optional
 
 import pandas as pd
 
@@ -13,7 +12,7 @@ from .operations._tracking import get_active_session, get_sample_size
 def load_source(
     source_id: str,
     *,
-    sample: Optional[int] = None,
+    sample: int | None = None,
 ) -> pd.DataFrame:
     """
     Load a source DataFrame from a feather file.

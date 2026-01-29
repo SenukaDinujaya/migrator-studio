@@ -25,7 +25,7 @@ MANIFEST
 venv/
 ENV/
 env/
-.venv
+.venv/
 
 # IDE
 .vscode/
@@ -34,6 +34,7 @@ env/
 *.swo
 *~
 .DS_Store
+.claude/
 
 # Testing
 .pytest_cache/
@@ -45,15 +46,15 @@ htmlcov/
 # Distribution
 *.whl
 
-# Jupyter
+# Jupyter/Marimo
 .ipynb_checkpoints/
 *.ipynb
+__marimo__/
 
 # Data files (don't commit actual migration data)
-*.feather
+data/
 *.parquet
 *.csv
-data/
 
 # Logs
 *.log
@@ -71,6 +72,9 @@ output/
 tmp/
 temp/
 *.tmp
+.tmp/
 
-# Sample data (generated for development/testing)
-sample/
+# Lock files (use pyproject.toml)
+uv.lock
+poetry.lock
+Pipfile.lock

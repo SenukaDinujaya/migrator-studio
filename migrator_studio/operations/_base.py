@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import inspect
 import time
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, TypeVar
 
 import pandas as pd
 
@@ -17,7 +18,7 @@ _OPERATIONS: dict[str, Callable] = {}
 
 def tracked(
     operation_name: str,
-    affected_columns: Optional[Callable[[dict], list[str]]] = None,
+    affected_columns: Callable[[dict], list[str]] | None = None,
 ) -> Callable[[F], F]:
     """Decorator that tracks operation in build mode. No-op in production.
 
@@ -114,3 +115,6 @@ def get_operation(name: str) -> Callable:
     if name not in _OPERATIONS:
         raise KeyError(f"Operation '{name}' not found. Available: {list_operations()}")
     return _OPERATIONS[name]
+
+
+__all__ = ["tracked", "list_operations", "get_operation"]

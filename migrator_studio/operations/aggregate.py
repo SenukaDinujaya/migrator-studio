@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Union
-
 import pandas as pd
 
 from ._base import tracked
@@ -23,8 +21,8 @@ def _get_agg_columns(p: dict) -> list[str]:
 @tracked("groupby_agg", affected_columns=_get_agg_columns)
 def groupby_agg(
     df: pd.DataFrame,
-    by: Union[str, list[str]],
-    agg: dict[str, Union[str, list[str]]],
+    by: str | list[str],
+    agg: dict[str, str | list[str]],
 ) -> pd.DataFrame:
     """
     Group by columns and aggregate.
@@ -49,7 +47,7 @@ def groupby_agg(
     validate_columns_exist(df, by, "groupby_agg")
 
     # Validate agg columns exist
-    for col in agg.keys():
+    for col in agg:
         validate_column_exists(df, col, "groupby_agg")
 
     if isinstance(by, str):
@@ -70,7 +68,7 @@ def groupby_agg(
 @tracked("groupby_concat", affected_columns=lambda p: [p.get("target", "")])
 def groupby_concat(
     df: pd.DataFrame,
-    by: Union[str, list[str]],
+    by: str | list[str],
     column: str,
     target: str,
     sep: str = " ",
@@ -101,3 +99,6 @@ def groupby_concat(
     )
 
     return grouped.reset_index(drop=True)
+
+
+__all__ = ["groupby_agg", "groupby_concat"]

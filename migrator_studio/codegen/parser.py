@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import ast
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -19,7 +18,7 @@ class Step:
 class TransformerAST:
     """Parsed transformer file structure."""
     filepath: Path
-    module_docstring: Optional[str]
+    module_docstring: str | None
     imports: str
     sources: list[str]
     setup_code: str  # Code before first step() in transform
@@ -56,7 +55,7 @@ def _extract_sources_constant(tree: ast.Module) -> list[str]:
     return []
 
 
-def _find_transform_function(tree: ast.Module) -> Optional[ast.FunctionDef]:
+def _find_transform_function(tree: ast.Module) -> ast.FunctionDef | None:
     """Find the transform() function definition."""
     for node in tree.body:
         if isinstance(node, ast.FunctionDef) and node.name == "transform":
@@ -64,7 +63,7 @@ def _find_transform_function(tree: ast.Module) -> Optional[ast.FunctionDef]:
     return None
 
 
-def _is_step_call(node: ast.stmt) -> Optional[str]:
+def _is_step_call(node: ast.stmt) -> str | None:
     """Check if statement is a step() call, return step name if so."""
     if isinstance(node, ast.Expr):
         if isinstance(node.value, ast.Call):
@@ -124,7 +123,7 @@ def parse_transformer(filepath: Path) -> TransformerAST:
     # Split function body into setup and steps
     setup_lines = []
     steps: list[Step] = []
-    current_step_name: Optional[str] = None
+    current_step_name: str | None = None
     current_step_lines: list[str] = []
     current_step_lineno: int = 0
 

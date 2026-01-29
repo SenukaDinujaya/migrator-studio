@@ -3,26 +3,40 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "migrator_studio"
+name = "migrator-studio"
 version = "0.1.0"
 description = "Framework for building ERP data migration transformers faster"
 readme = "README.md"
-requires-python = ">=3.10"
 license = "MIT"
-authors = [{ name = "Senuka Dinujaya" }]
-keywords = ["data-migration", "pandas", "ERP", "transformers"]
+requires-python = ">=3.10"
+authors = [{ name = "Senuka Dinujaya", email = "senuka@example.com" }]
+keywords = [
+    "data-migration",
+    "pandas",
+    "ERP",
+    "transformers",
+    "ETL",
+    "data-pipeline",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database",
+    "Typing :: Typed",
 ]
 dependencies = [
     "pandas>=2.0.0",
     "pyarrow>=12.0.0",
     "click>=8.0.0",
-    "marimo>=0.1.0",
+    "marimo>=0.9.0",
 ]
 
 [project.scripts]
@@ -32,21 +46,60 @@ migrator = "migrator_studio.cli:cli"
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "pandas-stubs>=2.0.0",
 ]
 
 [project.urls]
+Homepage = "https://github.com/SenukaDinujaya/migrator-studio"
+Documentation = "https://github.com/SenukaDinujaya/migrator-studio#readme"
 Repository = "https://github.com/SenukaDinujaya/migrator-studio"
+Issues = "https://github.com/SenukaDinujaya/migrator-studio/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["migrator_studio"]
+artifacts = ["migrator_studio/py.typed"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/migrator_studio",
+    "/tests",
+    "/examples",
+    "/README.md",
+    "/LICENSE",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
-
-[tool.hatch.build.targets.wheel]
-packages = ["migrator_studio"]
+filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.coverage.run]
 source = ["migrator_studio"]
-omit = ["tests/*"]
+omit = ["tests/*", "examples/*"]
+branch = true
 
 [tool.coverage.report]
-exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+ignore_missing_imports = true

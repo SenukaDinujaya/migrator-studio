@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Literal, Optional, Union
-
 import pandas as pd
 
 from ._base import tracked
@@ -10,9 +8,9 @@ from ._validation import validate_columns_exist
 
 def _prepare_right_df(
     right: pd.DataFrame,
-    on: Optional[Union[str, list[str]]],
-    right_on: Optional[Union[str, list[str]]],
-    select_columns: Optional[list[str]],
+    on: str | list[str] | None,
+    right_on: str | list[str] | None,
+    select_columns: list[str] | None,
 ) -> pd.DataFrame:
     """Prepare the right DataFrame by selecting only needed columns."""
     if select_columns is None:
@@ -41,10 +39,10 @@ def merge_left(
     df: pd.DataFrame,
     right: pd.DataFrame,
     *,
-    on: Optional[Union[str, list[str]]] = None,
-    left_on: Optional[Union[str, list[str]]] = None,
-    right_on: Optional[Union[str, list[str]]] = None,
-    select_columns: Optional[list[str]] = None,
+    on: str | list[str] | None = None,
+    left_on: str | list[str] | None = None,
+    right_on: str | list[str] | None = None,
+    select_columns: list[str] | None = None,
     suffixes: tuple[str, str] = ("", "_right"),
 ) -> pd.DataFrame:
     """
@@ -83,10 +81,10 @@ def merge_inner(
     df: pd.DataFrame,
     right: pd.DataFrame,
     *,
-    on: Optional[Union[str, list[str]]] = None,
-    left_on: Optional[Union[str, list[str]]] = None,
-    right_on: Optional[Union[str, list[str]]] = None,
-    select_columns: Optional[list[str]] = None,
+    on: str | list[str] | None = None,
+    left_on: str | list[str] | None = None,
+    right_on: str | list[str] | None = None,
+    select_columns: list[str] | None = None,
     suffixes: tuple[str, str] = ("", "_right"),
 ) -> pd.DataFrame:
     """
@@ -111,10 +109,10 @@ def merge_outer(
     df: pd.DataFrame,
     right: pd.DataFrame,
     *,
-    on: Optional[Union[str, list[str]]] = None,
-    left_on: Optional[Union[str, list[str]]] = None,
-    right_on: Optional[Union[str, list[str]]] = None,
-    select_columns: Optional[list[str]] = None,
+    on: str | list[str] | None = None,
+    left_on: str | list[str] | None = None,
+    right_on: str | list[str] | None = None,
+    select_columns: list[str] | None = None,
     suffixes: tuple[str, str] = ("", "_right"),
 ) -> pd.DataFrame:
     """
@@ -132,3 +130,6 @@ def merge_outer(
         right_on=right_on,
         suffixes=suffixes,
     )
+
+
+__all__ = ["merge_left", "merge_inner", "merge_outer"]

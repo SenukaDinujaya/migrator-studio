@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 import pandas as pd
 
@@ -10,7 +10,7 @@ from ._validation import validate_columns_exist
 
 def _get_lookup_series(
     df: pd.DataFrame,
-    column: Union[str, list[str]],
+    column: str | list[str],
 ) -> pd.Series:
     """Get a Series to use for lookup (single value or tuple for multi-column)."""
     if isinstance(column, str):
@@ -23,7 +23,7 @@ def _get_lookup_series(
 def _apply_fallback(
     mapped: pd.Series,
     original: pd.Series,
-    fallback: Optional[Any],
+    fallback: Any | None,
     fallback_original: bool,
 ) -> pd.Series:
     """Apply fallback logic to mapped values."""
@@ -35,8 +35,8 @@ def _apply_fallback(
 
 
 def _resolve_target(
-    column: Union[str, list[str]],
-    target: Optional[str],
+    column: str | list[str],
+    target: str | None,
     func_name: str,
 ) -> str:
     """Resolve target column name, requiring it for multi-column keys."""
@@ -63,11 +63,11 @@ def _get_map_target(p: dict) -> list[str]:
 @tracked("map_dict", affected_columns=_get_map_target)
 def map_dict(
     df: pd.DataFrame,
-    column: Union[str, list[str]],
+    column: str | list[str],
     mapping: dict[Any, Any],
     *,
-    target: Optional[str] = None,
-    fallback: Optional[Any] = None,
+    target: str | None = None,
+    fallback: Any | None = None,
     fallback_original: bool = False,
 ) -> pd.DataFrame:
     """
@@ -120,13 +120,13 @@ def map_dict(
 @tracked("map_lookup", affected_columns=_get_map_target)
 def map_lookup(
     df: pd.DataFrame,
-    column: Union[str, list[str]],
+    column: str | list[str],
     lookup_df: pd.DataFrame,
-    key_column: Union[str, list[str]],
+    key_column: str | list[str],
     value_column: str,
     *,
-    target: Optional[str] = None,
-    fallback: Optional[Any] = None,
+    target: str | None = None,
+    fallback: Any | None = None,
     fallback_original: bool = False,
 ) -> pd.DataFrame:
     """
@@ -197,3 +197,6 @@ def map_lookup(
     result[target_col] = _apply_fallback(mapped, original_values, fallback, fallback_original)
 
     return result
+
+
+__all__ = ["map_dict", "map_lookup"]

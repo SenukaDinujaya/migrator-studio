@@ -12,54 +12,13 @@ Example:
 __version__ = "0.1.0"
 
 from .config import configure, get_config
-from .session import BuildSession
+
+# Display
+from .display import diff, preview, summary
 from .loader import load_source
-from .step import step
 
 # Registry functions
-from .operations._base import list_operations, get_operation
-
-# Filter (Pattern 1)
-from .operations.filter import (
-    filter_isin,
-    filter_not_isin,
-    filter_by_value,
-    filter_null,
-    filter_not_null,
-    filter_date,
-    sanitize_data,
-)
-
-# Merge (Pattern 2)
-from .operations.merge import (
-    merge_left,
-    merge_inner,
-    merge_outer,
-)
-
-# Mapping (Pattern 3)
-from .operations.mapping import (
-    map_dict,
-    map_lookup,
-)
-
-# Field (Pattern 4)
-from .operations.field import (
-    copy_column,
-    set_value,
-    concat_columns,
-    rename_columns,
-    drop_columns,
-    select_columns,
-)
-
-# Date (Pattern 5)
-from .operations.date import (
-    parse_date,
-    format_date,
-    extract_date_part,
-    handle_invalid_dates,
-)
+from .operations._base import get_operation, list_operations
 
 # Aggregate (Pattern 6)
 from .operations.aggregate import (
@@ -67,29 +26,35 @@ from .operations.aggregate import (
     groupby_concat,
 )
 
-# Convert (Pattern 7)
-from .operations.convert import (
-    to_numeric,
-    to_int,
-    to_string,
-    to_bool,
+# Apply (Pattern 12)
+from .operations.apply import (
+    apply_column,
+    apply_row,
+    transform,
 )
 
 # Conditional (Pattern 8)
 from .operations.conditional import (
-    where,
     case,
-    fill_null,
     coalesce,
+    fill_null,
+    where,
 )
 
-# String (Pattern 9)
-from .operations.string import (
-    str_upper,
-    str_lower,
-    str_strip,
-    str_replace,
-    str_regex_replace,
+# Convert (Pattern 7)
+from .operations.convert import (
+    to_bool,
+    to_int,
+    to_numeric,
+    to_string,
+)
+
+# Date (Pattern 5)
+from .operations.date import (
+    extract_date_part,
+    format_date,
+    handle_invalid_dates,
+    parse_date,
 )
 
 # Dedup (Pattern 11)
@@ -99,15 +64,50 @@ from .operations.dedup import (
     keep_min,
 )
 
-# Apply (Pattern 12)
-from .operations.apply import (
-    apply_row,
-    apply_column,
-    transform,
+# Field (Pattern 4)
+from .operations.field import (
+    concat_columns,
+    copy_column,
+    drop_columns,
+    rename_columns,
+    select_columns,
+    set_value,
 )
 
-# Display
-from .display import preview, summary, diff
+# Filter (Pattern 1)
+from .operations.filter import (
+    filter_by_value,
+    filter_date,
+    filter_isin,
+    filter_not_isin,
+    filter_not_null,
+    filter_null,
+    sanitize_data,
+)
+
+# Mapping (Pattern 3)
+from .operations.mapping import (
+    map_dict,
+    map_lookup,
+)
+
+# Merge (Pattern 2)
+from .operations.merge import (
+    merge_inner,
+    merge_left,
+    merge_outer,
+)
+
+# String (Pattern 9)
+from .operations.string import (
+    str_lower,
+    str_regex_replace,
+    str_replace,
+    str_strip,
+    str_upper,
+)
+from .session import BuildSession
+from .step import step
 
 __all__ = [
     "__version__",

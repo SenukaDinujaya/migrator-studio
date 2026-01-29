@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Union
+from typing import Literal
 
 import pandas as pd
 
@@ -11,7 +11,7 @@ from ._validation import validate_column_exists, validate_columns_exist
 @tracked("drop_duplicates", affected_columns=lambda p: [])
 def drop_duplicates(
     df: pd.DataFrame,
-    columns: Union[str, list[str]],
+    columns: str | list[str],
     keep: Literal["first", "last"] = "first",
 ) -> pd.DataFrame:
     """
@@ -37,7 +37,7 @@ def drop_duplicates(
 @tracked("keep_max", affected_columns=lambda p: [])
 def keep_max(
     df: pd.DataFrame,
-    by: Union[str, list[str]],
+    by: str | list[str],
     value_column: str,
 ) -> pd.DataFrame:
     """
@@ -66,7 +66,7 @@ def keep_max(
 @tracked("keep_min", affected_columns=lambda p: [])
 def keep_min(
     df: pd.DataFrame,
-    by: Union[str, list[str]],
+    by: str | list[str],
     value_column: str,
 ) -> pd.DataFrame:
     """
@@ -90,3 +90,6 @@ def keep_min(
     # Get index of min value in each group
     idx = df.groupby(by, sort=False)[value_column].idxmin()
     return df.loc[idx].reset_index(drop=True)
+
+
+__all__ = ["drop_duplicates", "keep_max", "keep_min"]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 import pandas as pd
 
@@ -21,8 +21,8 @@ def parse_date(
     df: pd.DataFrame,
     column: str,
     *,
-    target: Optional[str] = None,
-    format: Optional[str] = None,
+    target: str | None = None,
+    format: str | None = None,
 ) -> pd.DataFrame:
     """
     Parse string column to datetime.
@@ -55,7 +55,7 @@ def format_date(
     column: str,
     format: str,
     *,
-    target: Optional[str] = None,
+    target: str | None = None,
 ) -> pd.DataFrame:
     """
     Format datetime column to string.
@@ -158,3 +158,6 @@ def handle_invalid_dates(
     result.loc[mask, column] = fallback
 
     return result
+
+
+__all__ = ["parse_date", "format_date", "extract_date_part", "handle_invalid_dates"]

@@ -3,9 +3,9 @@ from .operations._tracking import (
     OperationRecord,
     SessionTracker,
     get_active_session,
-    set_active_session,
-    is_build_mode,
     get_sample_size,
+    is_build_mode,
+    set_active_session,
 )
 
 __all__ = [

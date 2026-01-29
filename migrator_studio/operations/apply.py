@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import pandas as pd
 
@@ -56,7 +57,7 @@ def apply_column(
     column: str,
     func: Callable[[Any], Any],
     *,
-    target: Optional[str] = None,
+    target: str | None = None,
 ) -> pd.DataFrame:
     """
     Apply a function to each value in a column.
@@ -111,3 +112,6 @@ def transform(
         df = transform(df, complex_transform)
     """
     return func(df.copy())
+
+
+__all__ = ["apply_row", "apply_column", "transform"]

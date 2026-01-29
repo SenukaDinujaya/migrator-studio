@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import Any, Sequence, Union
+from typing import Any
 
 import pandas as pd
 
@@ -30,7 +31,7 @@ def validate_column_exists(df: pd.DataFrame, column: str, operation: str) -> Non
 
 def validate_columns_exist(
     df: pd.DataFrame,
-    columns: Union[str, list[str]],
+    columns: str | list[str],
     operation: str,
 ) -> None:
     """Validate that all columns exist in the DataFrame."""

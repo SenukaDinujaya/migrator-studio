@@ -42,6 +42,21 @@ class TestStrUpper:
             op = session.history[0]
             assert op.operation == "str_upper"
 
+    def test_str_upper_missing_column(self, sample_df):
+        """str_upper should raise KeyError for missing column."""
+        with pytest.raises(KeyError, match="nonexistent"):
+            str_upper(sample_df, "nonexistent")
+
+    def test_str_upper_empty_df(self, empty_df):
+        """str_upper should work on empty DataFrame."""
+        result = str_upper(empty_df, "name")
+        assert len(result) == 0
+
+    def test_str_upper_single_row(self, single_row_df):
+        """str_upper should work on single-row DataFrame."""
+        result = str_upper(single_row_df, "name")
+        assert result["name"].values[0] == "ALICE"
+
 
 class TestStrLower:
     """Tests for str_lower function."""
@@ -59,6 +74,11 @@ class TestStrLower:
 
         assert "name_lower" in result.columns
         assert "alice" in result["name_lower"].values
+
+    def test_str_lower_missing_column(self, sample_df):
+        """str_lower should raise KeyError for missing column."""
+        with pytest.raises(KeyError, match="nonexistent"):
+            str_lower(sample_df, "nonexistent")
 
 
 class TestStrStrip:
@@ -80,6 +100,12 @@ class TestStrStrip:
 
         assert result["value_stripped"].values[0] == "hello"
         assert result["value"].values[0] == "  hello  "
+
+    def test_str_strip_missing_column(self):
+        """str_strip should raise KeyError for missing column."""
+        df = pd.DataFrame({"value": ["hello"]})
+        with pytest.raises(KeyError, match="nonexistent"):
+            str_strip(df, "nonexistent")
 
 
 class TestStrReplace:
@@ -109,6 +135,12 @@ class TestStrReplace:
 
         assert result["phone_clean"].values[0] == "5551234"
         assert result["phone"].values[0] == "555-1234"
+
+    def test_str_replace_missing_column(self):
+        """str_replace should raise KeyError for missing column."""
+        df = pd.DataFrame({"phone": ["555-1234"]})
+        with pytest.raises(KeyError, match="nonexistent"):
+            str_replace(df, "nonexistent", "-", "")
 
 
 class TestStrRegexReplace:
@@ -152,6 +184,12 @@ class TestStrRegexReplace:
             assert len(session.history) == 1
             op = session.history[0]
             assert op.operation == "str_regex_replace"
+
+    def test_str_regex_replace_missing_column(self):
+        """str_regex_replace should raise KeyError for missing column."""
+        df = pd.DataFrame({"phone": ["555-1234"]})
+        with pytest.raises(KeyError, match="nonexistent"):
+            str_regex_replace(df, "nonexistent", r"\D", "")
 
 
 class TestStringOperationChaining:

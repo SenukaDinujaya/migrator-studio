@@ -96,7 +96,7 @@ def rename_columns(
         df = rename_columns(df, {"old_name": "new_name", "col1": "column_one"})
     """
     # Validate source columns exist
-    missing = [col for col in mapping.keys() if col not in df.columns]
+    missing = [col for col in mapping if col not in df.columns]
     if missing:
         raise KeyError(
             f"rename_columns failed: Columns {missing} not found in DataFrame. "
@@ -141,3 +141,6 @@ def select_columns(
     """
     validate_columns_exist(df, columns, "select_columns")
     return df[columns].copy()
+
+
+__all__ = ["copy_column", "set_value", "concat_columns", "rename_columns", "drop_columns", "select_columns"]

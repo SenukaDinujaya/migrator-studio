@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pandas as pd
 
 from .operations._tracking import (
@@ -67,7 +65,7 @@ class BuildSession:
         self.sample = sample
         self.live_preview = live_preview
         self.preview_rows = preview_rows
-        self._tracker: Optional[SessionTracker] = None
+        self._tracker: SessionTracker | None = None
         self._op_count = 0
 
     def _on_record(self, record: OperationRecord, result_df: pd.DataFrame) -> None:
@@ -115,7 +113,7 @@ class BuildSession:
         return self._tracker.get_history()
 
     @property
-    def last_operation(self) -> Optional[OperationRecord]:
+    def last_operation(self) -> OperationRecord | None:
         history = self.history
         return history[-1] if history else None
 

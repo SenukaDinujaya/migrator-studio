@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pandas as pd
 
 from ._base import tracked
+from ._validation import validate_column_exists
 
 
 def _get_string_target(p: dict) -> list[str]:
@@ -20,9 +19,24 @@ def str_upper(
     df: pd.DataFrame,
     column: str,
     *,
-    target_column: Optional[str] = None,
+    target_column: str | None = None,
 ) -> pd.DataFrame:
-    """Convert column values to uppercase."""
+    """Convert column values to uppercase.
+
+    Args:
+        df: Input DataFrame.
+        column: Column to convert.
+        target_column: Optional column to write the result to.
+            If not provided, the original column is modified in-place.
+
+    Returns:
+        DataFrame with uppercase values.
+
+    Example:
+        df = str_upper(df, "name")
+        df = str_upper(df, "name", target_column="name_upper")
+    """
+    validate_column_exists(df, column, "str_upper")
     result = df.copy()
     target = target_column if target_column else column
     result[target] = result[column].str.upper()
@@ -34,9 +48,24 @@ def str_lower(
     df: pd.DataFrame,
     column: str,
     *,
-    target_column: Optional[str] = None,
+    target_column: str | None = None,
 ) -> pd.DataFrame:
-    """Convert column values to lowercase."""
+    """Convert column values to lowercase.
+
+    Args:
+        df: Input DataFrame.
+        column: Column to convert.
+        target_column: Optional column to write the result to.
+            If not provided, the original column is modified in-place.
+
+    Returns:
+        DataFrame with lowercase values.
+
+    Example:
+        df = str_lower(df, "name")
+        df = str_lower(df, "name", target_column="name_lower")
+    """
+    validate_column_exists(df, column, "str_lower")
     result = df.copy()
     target = target_column if target_column else column
     result[target] = result[column].str.lower()
@@ -48,9 +77,24 @@ def str_strip(
     df: pd.DataFrame,
     column: str,
     *,
-    target_column: Optional[str] = None,
+    target_column: str | None = None,
 ) -> pd.DataFrame:
-    """Strip leading/trailing whitespace from column values."""
+    """Strip leading and trailing whitespace from column values.
+
+    Args:
+        df: Input DataFrame.
+        column: Column to strip.
+        target_column: Optional column to write the result to.
+            If not provided, the original column is modified in-place.
+
+    Returns:
+        DataFrame with stripped values.
+
+    Example:
+        df = str_strip(df, "name")
+        df = str_strip(df, "name", target_column="name_clean")
+    """
+    validate_column_exists(df, column, "str_strip")
     result = df.copy()
     target = target_column if target_column else column
     result[target] = result[column].str.strip()
@@ -64,9 +108,25 @@ def str_replace(
     old: str,
     new: str,
     *,
-    target_column: Optional[str] = None,
+    target_column: str | None = None,
 ) -> pd.DataFrame:
-    """Replace substring in column values."""
+    """Replace substring in column values.
+
+    Args:
+        df: Input DataFrame.
+        column: Column to perform replacement on.
+        old: Substring to find.
+        new: Replacement string.
+        target_column: Optional column to write the result to.
+            If not provided, the original column is modified in-place.
+
+    Returns:
+        DataFrame with replaced values.
+
+    Example:
+        df = str_replace(df, "phone", "-", "")
+    """
+    validate_column_exists(df, column, "str_replace")
     result = df.copy()
     target = target_column if target_column else column
     result[target] = result[column].str.replace(old, new, regex=False)
@@ -80,15 +140,35 @@ def str_regex_replace(
     pattern: str,
     replacement: str,
     *,
-    target_column: Optional[str] = None,
+    target_column: str | None = None,
 ) -> pd.DataFrame:
-    """
-    Replace regex pattern in column values.
+    """Replace regex pattern in column values.
+
+    Args:
+        df: Input DataFrame.
+        column: Column to perform replacement on.
+        pattern: Regular expression pattern to match.
+        replacement: Replacement string (may include backreferences).
+        target_column: Optional column to write the result to.
+            If not provided, the original column is modified in-place.
+
+    Returns:
+        DataFrame with replaced values.
 
     Example:
         df = str_regex_replace(df, "phone", r"\\D", "")  # Remove non-digits
     """
+    validate_column_exists(df, column, "str_regex_replace")
     result = df.copy()
     target = target_column if target_column else column
     result[target] = result[column].str.replace(pattern, replacement, regex=True)
     return result
+
+
+__all__ = [
+    "str_upper",
+    "str_lower",
+    "str_strip",
+    "str_replace",
+    "str_regex_replace",
+]

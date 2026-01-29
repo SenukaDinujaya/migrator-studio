@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -84,7 +84,7 @@ def fill_null(
     column: str,
     value: Any,
     *,
-    target: Optional[str] = None,
+    target: str | None = None,
 ) -> pd.DataFrame:
     """
     Fill null/NA values in a column.
@@ -135,3 +135,6 @@ def coalesce(
         result[target] = result[target].fillna(result[col])
 
     return result
+
+
+__all__ = ["where", "case", "fill_null", "coalesce"]

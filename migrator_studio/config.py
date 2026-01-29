@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 _DEFAULT_DATA_PATH = "./data"
 _DEFAULT_NOTEBOOK_DIR = ".tmp"
@@ -16,12 +15,12 @@ class Config:
     notebook_dir: str
 
 
-_config: Optional[Config] = None
+_config: Config | None = None
 
 
 def configure(
-    data_path: Optional[str] = None,
-    notebook_dir: Optional[str] = None,
+    data_path: str | None = None,
+    notebook_dir: str | None = None,
 ) -> None:
     """
     Configure migrator_studio settings.

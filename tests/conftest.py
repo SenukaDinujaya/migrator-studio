@@ -23,6 +23,29 @@ def sample_df():
 
 
 @pytest.fixture
+def empty_df():
+    """Create an empty DataFrame with standard columns."""
+    return pd.DataFrame({
+        "id": pd.Series([], dtype="int64"),
+        "name": pd.Series([], dtype="object"),
+        "status": pd.Series([], dtype="object"),
+        "amount": pd.Series([], dtype="float64"),
+    })
+
+
+@pytest.fixture
+def single_row_df():
+    """Create a single-row DataFrame for edge case testing."""
+    return pd.DataFrame({
+        "id": [1],
+        "name": ["Alice"],
+        "status": ["Active"],
+        "amount": [100.0],
+        "region": ["North"],
+    })
+
+
+@pytest.fixture
 def lookup_df():
     """Create a lookup DataFrame for testing merges and mappings."""
     return pd.DataFrame({

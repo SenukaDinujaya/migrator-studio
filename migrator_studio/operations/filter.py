@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, Optional, Sequence, Union
+from typing import Any
 
 import pandas as pd
 
 from ._base import tracked
 from ._validation import (
-    FilterTypeError,
     validate_column_exists,
     validate_comparable,
     validate_date_value,
@@ -64,12 +64,12 @@ def filter_by_value(
     df: pd.DataFrame,
     column: str,
     *,
-    eq: Optional[Any] = None,
-    ne: Optional[Any] = None,
-    gt: Optional[Any] = None,
-    gte: Optional[Any] = None,
-    lt: Optional[Any] = None,
-    lte: Optional[Any] = None,
+    eq: Any | None = None,
+    ne: Any | None = None,
+    gt: Any | None = None,
+    gte: Any | None = None,
+    lt: Any | None = None,
+    lte: Any | None = None,
 ) -> pd.DataFrame:
     """
     Filter rows by value conditions. Multiple conditions are ANDed together.
@@ -161,10 +161,10 @@ def filter_date(
     df: pd.DataFrame,
     column: str,
     *,
-    after: Optional[Union[str, datetime, pd.Timestamp]] = None,
-    before: Optional[Union[str, datetime, pd.Timestamp]] = None,
-    on_or_after: Optional[Union[str, datetime, pd.Timestamp]] = None,
-    on_or_before: Optional[Union[str, datetime, pd.Timestamp]] = None,
+    after: str | datetime | pd.Timestamp | None = None,
+    before: str | datetime | pd.Timestamp | None = None,
+    on_or_after: str | datetime | pd.Timestamp | None = None,
+    on_or_before: str | datetime | pd.Timestamp | None = None,
 ) -> pd.DataFrame:
     """
     Filter rows by date conditions. Multiple conditions are ANDed together.
@@ -269,3 +269,6 @@ def sanitize_data(
                 )
 
     return result
+
+
+__all__ = ["filter_isin", "filter_not_isin", "filter_by_value", "filter_null", "filter_not_null", "filter_date", "sanitize_data"]

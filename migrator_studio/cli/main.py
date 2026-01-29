@@ -1,15 +1,15 @@
 """Main CLI entry point for migrator_studio."""
 from __future__ import annotations
 
-import os
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
 
 import click
 
+from ..codegen import generate_notebook, parse_transformer
 from ..config import configure, get_config
-from ..codegen import parse_transformer, generate_notebook
 
 
 @click.group()
@@ -136,7 +136,21 @@ def sync(transformer: Path):
     Example:
         migrator sync sample/TFRM-EXAMPLE-001.py
     """
+    from ..codegen.sync import sync_notebook
+
     notebook_path = transformer.with_suffix(".nb.py")
+
+    # Also check in the configured notebook directory
+    if not notebook_path.exists():
+        try:
+            configure(data_path=str(transformer.parent))
+            config = get_config()
+            notebook_dir = Path(config.notebook_dir)
+            alt_path = notebook_dir / f"{transformer.stem}.nb.py"
+            if alt_path.exists():
+                notebook_path = alt_path
+        except Exception:
+            pass
 
     if not notebook_path.exists():
         click.echo(f"Notebook not found: {notebook_path}", err=True)
@@ -146,26 +160,36 @@ def sync(transformer: Path):
     click.echo(f"Syncing from: {notebook_path}")
     click.echo(f"To transformer: {transformer}")
 
-    # TODO: Implement sync logic
-    # This requires parsing the notebook and extracting step code
-    click.echo("Sync not yet implemented - coming soon!")
+    try:
+        sync_notebook(notebook_path, transformer)
+        click.echo("Sync complete.")
+    except Exception as e:
+        click.echo(f"Sync failed: {e}", err=True)
+        sys.exit(1)
 
 
 @cli.command()
 @click.argument("transformer", type=click.Path(exists=True, path_type=Path))
-def run(transformer: Path):
+@click.option(
+    "--output", "-o",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Save result to file. Supports .csv and .feather formats.",
+)
+def run(transformer: Path, output: Path | None):
     """
     Run a transformer in production mode.
+
+    Loads all sources defined in SOURCES, runs the transform() function,
+    and prints a summary of the result.
 
     TRANSFORMER is the path to the transformer .py file.
 
     Example:
         migrator run sample/TFRM-EXAMPLE-001.py
+        migrator run sample/TFRM-EXAMPLE-001.py -o output.csv
     """
     click.echo(f"Running transformer: {transformer}")
-
-    # Import and run the transformer
-    import importlib.util
 
     spec = importlib.util.spec_from_file_location("transformer", transformer)
     if spec is None or spec.loader is None:
@@ -173,14 +197,61 @@ def run(transformer: Path):
         sys.exit(1)
 
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+
+    try:
+        spec.loader.exec_module(module)
+    except Exception as e:
+        click.echo(f"Error loading transformer: {e}", err=True)
+        sys.exit(1)
 
     if not hasattr(module, "transform"):
         click.echo("Transformer must have a 'transform' function", err=True)
         sys.exit(1)
 
-    # TODO: Load sources and run transform
-    click.echo("Production run not yet implemented - coming soon!")
+    # Load sources
+    sources_list = getattr(module, "SOURCES", [])
+    if not sources_list:
+        click.echo("Transformer has no SOURCES list defined.", err=True)
+        sys.exit(1)
+
+    # Configure data path relative to transformer
+    configure(data_path=str(transformer.parent.resolve()))
+
+    from ..loader import load_source
+
+    click.echo(f"Loading {len(sources_list)} sources...")
+    try:
+        sources = {src: load_source(src) for src in sources_list}
+    except FileNotFoundError as e:
+        click.echo(f"Source not found: {e}", err=True)
+        sys.exit(1)
+
+    for src_id, src_df in sources.items():
+        click.echo(f"  {src_id}: {len(src_df)} rows")
+
+    # Run transform
+    click.echo("Running transform...")
+    try:
+        result = module.transform(sources)
+    except Exception as e:
+        click.echo(f"Transform failed: {e}", err=True)
+        sys.exit(1)
+
+    # Print summary
+    click.echo(f"\nResult: {len(result)} rows, {len(result.columns)} columns")
+    click.echo(f"Columns: {list(result.columns)}")
+    click.echo(f"Dtypes:\n{result.dtypes.to_string()}")
+
+    # Optionally save output
+    if output:
+        if output.suffix == ".feather":
+            result.to_feather(output)
+        elif output.suffix == ".csv":
+            result.to_csv(output, index=False)
+        else:
+            click.echo(f"Unsupported output format: {output.suffix}. Use .csv or .feather.", err=True)
+            sys.exit(1)
+        click.echo(f"Saved to: {output}")
 
 
 def main():
